@@ -46,6 +46,7 @@ public:
   void step();
   void stepWithObstacle();
   void stepWithObstacleSameOrder();
+  void stepWithMovingObstacle();
 
   int xRes() const { return _xRes; };
   int yRes() const { return _yRes; };
@@ -230,7 +231,7 @@ protected:
   SPARSE_MATRIX _neumannIOP;
   SPARSE_MATRIX _dirichletIOP;
 
-  // Aaron added _fullIOP and peeledIOP
+  // ADJ: added _fullIOP and peeledIOP
   SPARSE_MATRIX _fullIOP;
   SPARSE_MATRIX _peeledIOP;
 
@@ -246,7 +247,7 @@ protected:
   void addVorticity();
   void addBuoyancy(Real *field);
 
-  //preconditioner stuff
+  // preconditioner stuff
   void zeroBoundary(FIELD_3D& x, unsigned char* skip);
 	
   void buildMICPreconditioner();
