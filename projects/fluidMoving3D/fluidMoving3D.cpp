@@ -66,6 +66,9 @@ int g_xRes = 200;
 int g_yRes = 266;
 int g_zRes = 200;
 
+// angle for the fan to revolve
+float g_angle = 0.0;
+
 void runEverytime();
 
 VEC3F cellCenter(int x, int y, int z);
@@ -142,21 +145,29 @@ void glutDisplay()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
 
-    glPushMatrix();
-      glTranslatef(0.5, 0.5, 0.5);
-      fluid->density().draw();
-      fluid->density().drawBoundingBox();
-    glPopMatrix();
+    // glPushMatrix();
+    //  glTranslatef(0.5, 0.5, 0.5);
+    //  fluid->density().draw();
+    //  fluid->density().drawBoundingBox();
+    // glPopMatrix();
 
     glPushMatrix();
+
       // apparently the coordinates' origin is at the bottom left
-      glTranslatef(cellCenter(g_xRes, g_yRes, g_zRes)[0], cellCenter(g_xRes, g_yRes, g_zRes)[1],
-          cellCenter(g_xRes, g_yRes, g_zRes)[2]);
+      // glTranslatef(cellCenter(g_xRes, g_yRes, g_zRes)[0], cellCenter(g_xRes, g_yRes, g_zRes)[1],
+      //    cellCenter(g_xRes, g_yRes, g_zRes)[2]);
       // make a wire sphere of radius 0.1 with 10 latitudes/longitudes
-      glutWireSphere(0.1, 10, 10);
+      // glutWireSphere(0.1, 10, 10);
+
+      glTranslatef(0.5, 0.5, 0.5);
+      glRotatef(g_angle, 0, 0, 1);
+      glRectf(0.0, 0.0, 0.2, 0.05);
+
     glPopMatrix();  
 
-    //drawAxes();
+    // drawAxes();
+    // glFlush();
+    // glutSwapBuffers();
   glvu.EndFrame();
   if (captureMovie) {
     movie.addFrameGL();
@@ -349,6 +360,16 @@ int main(int argc, char *argv[])
   return 1;
 }
 
+// Increment the spin angle mod 360
+void spin(int framesPerRevolution) 
+{
+  float epsilon = 360.0 / float(framesPerRevolution);
+  g_angle += epsilon;
+  if (g_angle >= 360.0) {
+    g_angle = 0.0;
+  }
+}
+
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 void runEverytime()
@@ -367,22 +388,22 @@ void runEverytime()
   if (animate)
   {
     static int steps = 0;
+    spin(600);
+
 
     // step the sim
-    cout << " Simulation step " << steps << " of " << simulationSnapshots << endl;
-    fluid->addSmokeColumn();
+    // cout << " Simulation step " << steps << " of " << simulationSnapshots << endl;
+    // fluid->addSmokeColumn();
 
-    // stepWithObstacle permutes the order of the splitting
-    // fluid->stepWithObstacle();
     
-    fluid->stepWithObstacleSameOrder();
+    // fluid->stepWithObstacleSameOrder();
 
     // write to disk
-    char buffer[256];
-    sprintf(buffer, "%sfluid.%04i.fluid3d", snapshotPath.c_str(), steps);
-    string filename(buffer);
-    fluid->writeGz(filename);
-    fluid->appendStreamsIOP();
+    // char buffer[256];
+    // sprintf(buffer, "%sfluid.%04i.fluid3d", snapshotPath.c_str(), steps);
+    // string filename(buffer);
+    // fluid->writeGz(filename);
+    // fluid->appendStreamsIOP();
    
     // check if we're done
     if (steps == simulationSnapshots)
@@ -392,7 +413,7 @@ void runEverytime()
       if (captureMovie)
       {
        // write out the movie
-       movie.writeMovie("movieObstacle.mov");
+       // movie.writeMovie("movieObstacle.mov");
 
       // reset the movie object
       movie = QUICKTIME_MOVIE();
@@ -400,16 +421,18 @@ void runEverytime()
      // stop capturing frames
      captureMovie = false;
      }
-    exit(0);
+    // exit(0);
     }
-  
-    if (steps % 10 == 0)
-      TIMER::printTimings();
+ 
+     
+    // if (steps % 10 == 0)
+    //  TIMER::printTimings();
 
     steps++;
   }
 }
 
+/*
 VEC3F cellCenter(int x, int y, int z) 
 {
   double dx = 1.0 / g_xRes;
@@ -433,5 +456,5 @@ VEC3F cellCenter(int x, int y, int z)
 
   return final;
 }
-
+*/
 
