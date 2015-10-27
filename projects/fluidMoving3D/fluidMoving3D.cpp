@@ -61,11 +61,6 @@ int xRes = 0;
 int yRes = 0;
 int zRes = 0;
 
-// awkward global resolutions for scope reasons
-int g_xRes = 200;
-int g_yRes = 266;
-int g_zRes = 200;
-
 // angle for the fan to revolve
 float g_angle = 0.0;
 
@@ -74,11 +69,9 @@ float g_displacement = 0.0;
 
 void runEverytime();
 
-VEC3F cellCenter(int x, int y, int z);
-
 vector<VECTOR> snapshots;
 
-// user configuration
+// user configuration initializations
 string snapshotPath("./data/snapshots.stam.no.vorticity/");
 string previewMovie("./data/stam.mov");
 int simulationSnapshots = 20;
@@ -148,31 +141,21 @@ void glutDisplay()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
 
-    // glPushMatrix();
-    //  glTranslatef(0.5, 0.5, 0.5);
-    //  fluid->density().draw();
-    //  fluid->density().drawBoundingBox();
-    // glPopMatrix();
-
+    // draw the fluid density
     glPushMatrix();
+      glTranslatef(0.5, 0.5, 0.5);
+      fluid->density().draw();
+      fluid->density().drawBoundingBox();
+    glPopMatrix();
 
-      // apparently the coordinates' origin is at the bottom left
-      // glTranslatef(cellCenter(g_xRes, g_yRes, g_zRes)[0], cellCenter(g_xRes, g_yRes, g_zRes)[1],
-      //    cellCenter(g_xRes, g_yRes, g_zRes)[2]);
-      // make a wire sphere of radius 0.1 with 10 latitudes/longitudes
-      // glutWireSphere(0.1, 10, 10);
-
+    // Creating the spinning fan obstacle
+    glPushMatrix();
       glTranslatef(0.5 + g_displacement, 0.5, 0.5);
       glRotatef(g_angle, 0, 0, 1);
       glScalef(1.0, 2.0, 1.0);
       glutSolidCube(0.1);
-      // glRectf(0.0, 0.0, 0.2, 0.05);
-
     glPopMatrix();  
 
-    // drawAxes();
-    // glFlush();
-    // glutSwapBuffers();
   glvu.EndFrame();
   if (captureMovie) {
     movie.addFrameGL();
@@ -185,7 +168,6 @@ void glutDisplay()
 void glutIdle()
 {
   runEverytime();
-
   glutPostRedisplay();
 }
 
@@ -301,7 +283,6 @@ int glvuWindow()
   float Far = 10.0f;
   glvu.SetAllCams(ModelMin, ModelMax, Eye, LookAtCntr, Up, Yfov, Aspect, Near, Far);
 
-  //glvuVec3f center(0.25, 0.25, 0.25);
   glvuVec3f center(0.5, 0.5, 0.5);
   glvu.SetWorldCenter(center);
 
@@ -324,7 +305,7 @@ int main(int argc, char *argv[])
   SIMPLE_PARSER parser(argv[1]);
 
   int amplify = 4;
-  // what does amplify do??
+  // QUESTION: what does amplify do?
 
   xRes = parser.getInt("xRes", 48);
   yRes = parser.getInt("yRes", 64);
@@ -375,10 +356,12 @@ void spin(int framesPerRevolution)
   }
 }
 
+// Move the glTranslate along sinusoidal displacement
 void displace(int framesPerCircuit, int step)
 {
   g_displacement = 0.25 * sin(M_2_PI * step / framesPerCircuit);
 }
+
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 void runEverytime()
@@ -402,8 +385,8 @@ void runEverytime()
 
 
     // step the sim
-    // cout << " Simulation step " << steps << " of " << simulationSnapshots << endl;
-    // fluid->addSmokeColumn();
+    cout << " Simulation step " << step << " of " << simulationSnapshots << endl;
+    fluid->addSmokeColumn();
 
     
     // fluid->stepWithObstacleSameOrder();
@@ -441,30 +424,4 @@ void runEverytime()
     step++;
   }
 }
-
-/*
-VEC3F cellCenter(int x, int y, int z) 
-{
-  double dx = 1.0 / g_xRes;
-  double dy = 1.0 / g_yRes;
-  double dz = 1.0 / g_zRes;
-
-  VEC3F halfLengths(0.5, 0.5, 0.5);
-
-  // set it to the lower corner
-  VEC3F final = VEC3F(0.0, 0.0, 0.0) - halfLengths;
-
-  // displace to the NNN corner
-  final[0] += x * dx;
-  final[1] += y * dy;
-  final[2] += z * dz;
-
-  // displace it to the cell center
-  final[0] += dx * 0.5;
-  final[1] += dy * 0.5;
-  final[2] += dz * 0.5;
-
-  return final;
-}
-*/
 
