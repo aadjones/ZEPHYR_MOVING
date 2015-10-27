@@ -69,6 +69,9 @@ int g_zRes = 200;
 // angle for the fan to revolve
 float g_angle = 0.0;
 
+// horizontal displacement for the fan
+float g_displacement = 0.0;
+
 void runEverytime();
 
 VEC3F cellCenter(int x, int y, int z);
@@ -159,9 +162,11 @@ void glutDisplay()
       // make a wire sphere of radius 0.1 with 10 latitudes/longitudes
       // glutWireSphere(0.1, 10, 10);
 
-      glTranslatef(0.5, 0.5, 0.5);
+      glTranslatef(0.5 + g_displacement, 0.5, 0.5);
       glRotatef(g_angle, 0, 0, 1);
-      glRectf(0.0, 0.0, 0.2, 0.05);
+      glScalef(1.0, 2.0, 1.0);
+      glutSolidCube(0.1);
+      // glRectf(0.0, 0.0, 0.2, 0.05);
 
     glPopMatrix();  
 
@@ -370,6 +375,10 @@ void spin(int framesPerRevolution)
   }
 }
 
+void displace(int framesPerCircuit, int step)
+{
+  g_displacement = 0.25 * sin(M_2_PI * step / framesPerCircuit);
+}
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 void runEverytime()
@@ -387,8 +396,9 @@ void runEverytime()
 
   if (animate)
   {
-    static int steps = 0;
-    spin(600);
+    static int step = 0;
+    spin(300);
+    displace(60, step);
 
 
     // step the sim
@@ -406,7 +416,7 @@ void runEverytime()
     // fluid->appendStreamsIOP();
    
     // check if we're done
-    if (steps == simulationSnapshots)
+    if (step == simulationSnapshots)
     {
       TIMER::printTimings();      
       // if we were already capturing a movie
@@ -425,10 +435,10 @@ void runEverytime()
     }
  
      
-    // if (steps % 10 == 0)
+    // if (step % 10 == 0)
     //  TIMER::printTimings();
 
-    steps++;
+    step++;
   }
 }
 
