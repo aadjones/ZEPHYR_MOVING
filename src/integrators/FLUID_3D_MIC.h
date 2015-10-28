@@ -44,7 +44,6 @@ public:
   void addSmokeTestCase(Real* field, VEC3I res);
 
   void step();
-  void stepWithObstacle();
   void stepWithObstacleSameOrder();
   void stepWithMovingObstacle();
 
@@ -266,9 +265,6 @@ protected:
 
   // build the damping matrix
   void buildPeeledDampingMatrixFull();
-
-  // build the IOP stomping matrix
-  void buildSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius);
 
   // build the peeled IOP stomping matrix
   void buildPeeledSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius);
