@@ -153,6 +153,7 @@ void glutDisplay()
       glTranslatef(0.5 + g_displacement, 0.5, 0.5);
       glRotatef(g_angle, 0, 0, 1);
       glScalef(1.0, 2.0, 1.0);
+      glColor4b(100, 20, 20, 100);
       glutSolidCube(0.1);
     glPopMatrix();  
 
@@ -380,8 +381,8 @@ void runEverytime()
   if (animate)
   {
     static int step = 0;
-    spin(300);
-    displace(60, step);
+    spin(150);
+    // displace(60, step);
 
 
     // step the sim
@@ -414,7 +415,7 @@ void runEverytime()
      // stop capturing frames
      captureMovie = false;
      }
-    // exit(0);
+    exit(0);
     }
  
      
