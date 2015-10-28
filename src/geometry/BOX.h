@@ -26,28 +26,56 @@
 #include "FIELD_3D.h"
 #include <iostream>
 
-class BOX: public OBSTACLE  
+class BOX 
 {
 public:
-	BOX() {};
-	~BOX() {};
+  BOX(const VEC3F& center, const VEC3F& lengths, int framesPerRevolution);
+	BOX();
+	~BOX();
 
+  void set_center(const VEC3F& center) { _center = center; };
+
+  // set the x-, y-, and z-dimensions of the box
+  void set_lengths(const VEC3F& lengths) { _lengths = lengths; };
+
+  void set_halfLengths() { _halfLengths = 0.5 * _lengths; };
+
+  void updateRotationMatrix();
+
+  // update the time step since the box moves in time
+  void update_step(int step) { _step = step; };
+
+  // is the passed in point inside the box?
+  bool inside(const VEC3F& point);
+
+  // compute the radial vector from a point to the center of rotation of the box
+  void update_r(const VEC3F& point, VEC3F* r);
 
   // set a constant angular velocity, assuming an axis of rotation (0,0,1)
-  // void set_angularVelocity(int framesPerRevolution) {
-  //  _angularVelocity[0] = 0.0;
-  //  _angularVelocity[1] = 0.0;
-  //  _angularVelocity[2] = M_2_PI / (float)framesPerRevolution;
-  // };
+  void set_angularVelocity() {
+  _angularVelocity[0] = 0.0;
+  _angularVelocity[1] = 0.0;
+  _angularVelocity[2] = M_2_PI / (float)_framesPerRevolution;
+  };
 
   // compute the linear velocity from the angular velocity and passed in radial direction
-  // void set_linearVelocity(const VEC3F& r) {
-  //  _velocity = cross(_angularVelocity, r);
-  // }
-
-  
+  // it is assumed that the center of rotation is the origin
+  void update_linearVelocity(const VEC3F& r) {
+  _velocity = cross(_angularVelocity, r);
+  };
 
 protected:
+  VEC3F _center;
+  VEC3F _lengths;
+  VEC3F _halfLengths;
+
+  VEC3F _angularVelocity;
+  VEC3F _velocity;
+  MATRIX3 _rotation;
+
+  int _step;
+  int _framesPerRevolution;
+
 };
 
 #endif

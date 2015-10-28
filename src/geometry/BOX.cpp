@@ -19,6 +19,19 @@
 
 #include "BOX.h"
 
+//////////////////////////////////////////////////////////////////////
+// Construction/Destruction
+//////////////////////////////////////////////////////////////////////
+
+
+BOX::BOX(const VEC3F& center, const VEC3F& lengths, int framesPerRevolution) :
+  _center(center), _lengths(lengths), _framesPerRevolution(framesPerRevolution)
+{
+  set_halfLengths();
+  set_angularVelocity();
+}
+
+
 BOX::BOX() 
 {
 }
@@ -26,3 +39,29 @@ BOX::BOX()
 BOX::~BOX()
 {
 }
+
+void BOX::updateRotationMatrix()
+{
+  // use the z-axis for rotation for now
+  VEC3F axis(0.0, 0.0, 1.0);
+  float theta = _step * M_2_PI / float(_framesPerRevolution);
+  // we must rotate clockwise, hence the minus sign
+  _rotation.rotation(axis, -theta); 
+}
+
+bool BOX::inside(const VEC3F& point) 
+{
+  // translate so that the center of rotation is the origin
+  VEC3F pointTranslated = point - _center;
+  // rotate *clockwise* back to the original position
+  pointTranslated = _rotation * pointTranslated;
+  return abs(pointTranslated[0]) <= _halfLengths[0] &&
+         abs(pointTranslated[1]) <= _halfLengths[1] &&
+         abs(pointTranslated[2]) <= _halfLengths[2];
+}
+
+void BOX::update_r(const VEC3F& point, VEC3F* r)
+{
+  *r = _center - point;
+}
+
