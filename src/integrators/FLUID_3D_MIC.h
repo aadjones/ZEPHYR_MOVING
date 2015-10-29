@@ -57,6 +57,7 @@ public:
   Real dx() const { return _dx; };
   Real& vorticityEps() { return _vorticityEps; };
   Real& buoyancy() { return _buoyancy; };
+  Real& wind()     { return _wind; };
     
   VEC3F  center() const {return _center;}	
   VEC3F  lengths() const {return _lengths;}	
@@ -208,6 +209,7 @@ protected:
   Real _dt;
   Real _dtOld;
   Real _buoyancy;
+  Real _wind;
   Real _vorticityEps;
   Real _heatDiffusion;
   Real _solverEps;
@@ -255,6 +257,7 @@ protected:
   // timestepping functions
   void addVorticity();
   void addBuoyancy(Real *field);
+  void addWind(Real *field);
 
   // preconditioner stuff
   void zeroBoundary(FIELD_3D& x, unsigned char* skip);

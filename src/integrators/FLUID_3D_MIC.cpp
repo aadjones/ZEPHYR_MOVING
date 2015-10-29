@@ -34,6 +34,9 @@ FLUID_3D_MIC::FLUID_3D_MIC(int xRes, int yRes, int zRes, int amplify, unsigned i
 
   _iterations = 1000;
   _buoyancy = 0.1f;
+  // ADJ: modifying buoyancy here
+  // _buoyancy = 0.05f;
+  _wind = 0.05f;
   _heatDiffusion = 1e-3;
   _vorticityEps = 2.0;
 	_totalTime = 0.0f;
@@ -335,7 +338,8 @@ void FLUID_3D_MIC::stepWithMovingObstacle(BOX* box)
 
   // compute the forces
   // ADJ: might want to remove buoyancy for the new sim
-  addBuoyancy(_heat.data());
+  // addBuoyancy(_heat.data());
+  // addWind(_heat.data());
   _velocity.axpy(_dt, _force);
   _force.clear();
 
@@ -374,10 +378,17 @@ void FLUID_3D_MIC::stepWithMovingObstacle(BOX* box)
   // project via Poisson
   project();
 
+  // repeat to do the iteration!
+  setVelocityNeumann();
+  afterIOP = _neumannIOP * _velocityNeumann;
+  _velocity.setWithPeeled(afterIOP);
+
+  project();
+
   // we don't really need to cache this since it is the final one, but it doesn't hurt 
   _postIOPAndPressure = _velocity;
 
-  // this corresponds to doing only 1 iteration of IOP, but that may be sufficient
+  // this corresponds to doing only 2 iterations of IOP, but that may be sufficient
   // for practical use
 
   currentTime += _dt;
@@ -578,6 +589,23 @@ void FLUID_3D_MIC::addBuoyancy(Real *field)
         _force[index][1] += beta * field[index];
 }
 
+
+//////////////////////////////////////////////////////////////////////
+// add 'wind' forces
+//////////////////////////////////////////////////////////////////////
+void FLUID_3D_MIC::addWind(Real* field)
+{
+ TIMER functionTimer(__FUNCTION__);
+	int index = 0;
+
+	Real beta = _wind;
+	if(beta==0.) return;
+	for (int z = 0; z < _zRes; z++)
+		for (int y = 0; y < _yRes; y++)
+			for (int x = 0; x < _xRes; x++, index++) 
+        _force[index][0] += beta * field[index];
+}
+
 //////////////////////////////////////////////////////////////////////
 // add vorticity to the force field
 //////////////////////////////////////////////////////////////////////
@@ -731,8 +759,11 @@ void FLUID_3D_MIC::addSmokeTestCase(Real* field, VEC3I res)
 	Real xTotal = dx * res[0];
 	Real zTotal = dx * res[2];
 
-  Real heighMin = 0.05;
-  Real heighMax = 0.10;
+  // Real heighMin = 0.05;
+  // Real heighMax = 0.10;
+  // ADJ: updated these heights
+  Real heighMin = 0.35;
+  Real heighMax = 0.425;
 
   for (int z = 0; z < res[2]; z++)
     for (int y = (int)(heighMin*res[1]); y <= (int)(heighMax * res[1]); y++)

@@ -29,7 +29,7 @@
 class BOX 
 {
 public:
-  BOX(const VEC3F& center, const VEC3F& lengths, int framesPerRevolution);
+  BOX(const VEC3F& center, const VEC3F& lengths, double period);
 	BOX();
 	~BOX();
 
@@ -40,11 +40,13 @@ public:
 
   void set_halfLengths() { _halfLengths = 0.5 * _lengths; };
 
+  void set_dt(double dt) { _dt = dt; };
+
   void initialize_rotationMatrix();
   void update_rotationMatrix();
 
   // update the time step since the box moves in time
-  void update_step(int step) { _step = step; };
+  void update_time() { _currentTime += _dt; };
 
   // is the passed in point inside the box?
   bool inside(const VEC3F& point);
@@ -56,29 +58,44 @@ public:
   void set_angularVelocity() {
   _angularVelocity[0] = 0.0;
   _angularVelocity[1] = 0.0;
-  _angularVelocity[2] = M_2_PI / (float)_framesPerRevolution;
+  _angularVelocity[2] = M_2_PI / _period;
   };
 
+  // compute what angle we have rotated through given the current time
+  void update_theta() { _theta = _currentTime * 2 * M_PI / _period; }
+
+  // convert to degrees for OpenGL
+  double thetaDegrees() const { return _theta * 360 / (2 * M_PI); } 
+
   // compute the linear velocity from the angular velocity and passed in radial direction
-  // it is assumed that the center of rotation is the origin
-  void update_linearVelocity(const VEC3F& r) {
-  _velocity = cross(_angularVelocity, r);
-  };
+  // it is assumed that the center of rotation is the (translated) origin
+  void update_linearVelocity(const VEC3F& r) { _velocity = cross(_angularVelocity, r); };
 
   // get a pointer to velocity
   VEC3F* get_velocity() { return &(_velocity); }
+
+  // spin the box around a fixed axis of rotation
+  void spin();
+
+  // draw to OpenGL
+  void draw() const;
+
+
 
 protected:
   VEC3F _center;
   VEC3F _lengths;
   VEC3F _halfLengths;
+  VEC3F _rotationAxis;
 
   VEC3F _angularVelocity;
   VEC3F _velocity;
   MATRIX3 _rotation;
 
-  int _step;
-  int _framesPerRevolution;
+  double _theta;
+  double _period;
+  double _currentTime;
+  double _dt;
 
 };
 

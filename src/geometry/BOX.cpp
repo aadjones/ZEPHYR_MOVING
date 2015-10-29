@@ -24,12 +24,15 @@
 //////////////////////////////////////////////////////////////////////
 
 
-BOX::BOX(const VEC3F& center, const VEC3F& lengths, int framesPerRevolution) :
-  _center(center), _lengths(lengths), _framesPerRevolution(framesPerRevolution)
+BOX::BOX(const VEC3F& center, const VEC3F& lengths, double period) :
+  _center(center), _lengths(lengths), _period(period)
 {
   set_halfLengths();
   set_angularVelocity();
   initialize_rotationMatrix();
+  _theta = 0.0;
+  _currentTime = 0.0;
+  _rotationAxis = VEC3F(0.0, 0.0, 1.0);
 }
 
 
@@ -49,11 +52,8 @@ void BOX::initialize_rotationMatrix()
 
 void BOX::update_rotationMatrix()
 {
-  // use the z-axis for rotation for now
-  VEC3F axis(0.0, 0.0, 1.0);
-  float theta = _step * 2 * M_PI / float(_framesPerRevolution);
   // we must rotate clockwise, hence the minus sign
-  _rotation = MATRIX3::rotation(axis, -theta);
+  _rotation = MATRIX3::rotation(_rotationAxis, -1 * _theta);
 }
 
 bool BOX::inside(const VEC3F& point) 
@@ -70,6 +70,27 @@ bool BOX::inside(const VEC3F& point)
 void BOX::update_r(const VEC3F& point, VEC3F* r)
 {
   *r = point - _center;
+}
+
+void BOX::spin() 
+{
+  float d_theta = 2 * M_PI * _dt / _period;
+  _theta += d_theta;
+  // work modulo 2pi
+  if (_theta >= 2 * M_PI) { _theta = 0.0; };
+  this->update_time();
+}
+
+void BOX::draw() const
+{
+  glPushMatrix();
+    glTranslatef(_center[0], _center[1], _center[2]);
+    // OpenGL uses degrees, so we need to convert
+    glRotatef(this->thetaDegrees(), _rotationAxis[0], _rotationAxis[1], _rotationAxis[2]);
+    glScalef(_lengths[0], _lengths[1], _lengths[2]);
+    glColor4b(30, 10, 5, 40);
+    glutSolidCube(1.0);
+  glPopMatrix();  
 }
 
 

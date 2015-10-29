@@ -56,18 +56,19 @@ bool animate = true;
 // fluid being simulated
 FLUID_3D_MIC* fluid = NULL;
 
-// moving obstacle
+// moving obstacle instantiation
 BOX* box = NULL;
 
 // box parameters
 VEC3F boxCenter(0.5, 0.5, 0.5);
 VEC3F boxLengths(0.1, 0.2, 0.1);
 
-// angle for the box to revolve
-float g_angle = 0.0;
-int framesPerRevolution = 75;
+// period over which the box revolves
+double period = 4.0;
+
 // horizontal displacement for the box
-float g_displacement = 0.0;
+// TODO: implement and integrate this into BOX class
+// float g_displacement = 0.0;
 
 // resolutions
 int xRes = 0;
@@ -155,14 +156,13 @@ void glutDisplay()
       fluid->density().drawBoundingBox();
     glPopMatrix();
 
-    // Creating the spinning fan obstacle
+    // draw the obstacle
     glPushMatrix();
-      glTranslatef(0.5 + g_displacement, 0.5, 0.5);
-      glRotatef(g_angle, 0, 0, 1);
-      glScalef(1.0, 2.0, 1.0);
-      glColor4b(100, 20, 20, 100);
-      glutSolidCube(0.1);
-    glPopMatrix();  
+      box->draw();
+    glPopMatrix();
+
+    // spin the box around a constant axis
+    box->spin();
 
   glvu.EndFrame();
   if (captureMovie) {
@@ -348,7 +348,9 @@ int main(int argc, char *argv[])
   fluid->vorticityEps() = vorticity;
   fluid->snapshotPath() = snapshotPath;
 
-  box = new BOX(boxCenter, boxLengths, framesPerRevolution);
+  box = new BOX(boxCenter, boxLengths, period);
+  double dt = fluid->dt();
+  box->set_dt(dt);
   
   glutInit(&argc, argv);
   glvuWindow();
@@ -356,21 +358,12 @@ int main(int argc, char *argv[])
   return 1;
 }
 
-// Increment the spin angle mod 360
-void spin(int framesPerRevolution) 
-{
-  float epsilon = 360.0 / float(framesPerRevolution);
-  g_angle += epsilon;
-  if (g_angle >= 360.0) {
-    g_angle = 0.0;
-  }
-}
-
+// TODO: integrate this inside BOX class  
 // Move the glTranslate along sinusoidal displacement
-void displace(int framesPerCircuit, int step)
-{
-  g_displacement = 0.25 * sin(2 * M_PI * step / framesPerCircuit);
-}
+// void displace(int framesPerCircuit, int step)
+// {
+  // g_displacement = 0.25 * sin(2 * M_PI * step / framesPerCircuit);
+// }
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -384,26 +377,17 @@ void runEverytime()
     mkdir = mkdir + snapshotPath;
     system(mkdir.c_str());
 
-    // Debugging code
-    // ****************************************************************
-
-    // ****************************************************************
-
     firstTime = false;
   }
 
   if (animate)
   {
     static int step = 0;
-    spin(framesPerRevolution);
-    // displace(60, step);
-
 
     // step the sim
     cout << " Simulation step " << step << " of " << simulationSnapshots << endl;
-    fluid->addSmokeColumn();
 
-    
+    fluid->addSmokeColumn();
     fluid->stepWithMovingObstacle(box);
 
     // write to disk
@@ -432,12 +416,10 @@ void runEverytime()
     exit(0);
     }
  
-     
     // if (step % 10 == 0)
     //  TIMER::printTimings();
 
     step++;
-    box->update_step(step);
   }
 }
 
