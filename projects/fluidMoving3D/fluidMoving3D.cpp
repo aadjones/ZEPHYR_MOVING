@@ -375,6 +375,20 @@ void runEverytime()
     mkdir = mkdir + snapshotPath;
     system(mkdir.c_str());
 
+    // Debugging code
+    // ****************************************************************
+    VEC3F boxCenter(0.5, 0.5, 0.5);
+    VEC3F boxLengths(0.1, 0.2, 0.1);
+    VEC3F boxHalfLengths = 0.5 * boxLengths;
+    BOX myBox(boxCenter, boxLengths, 150);
+    myBox.update_step(75);
+    myBox.updateRotationMatrix();
+    VEC3F origin(0.5, 0.5, 0.5);
+    origin -= boxHalfLengths;
+    bool isInside = myBox.inside(origin);
+    printf("isInside called on origin: %d\n", isInside);
+    // ****************************************************************
+
     firstTime = false;
   }
 
@@ -390,7 +404,7 @@ void runEverytime()
     fluid->addSmokeColumn();
 
     
-    // fluid->stepWithObstacleSameOrder();
+    // fluid->stepWithMovingObstacle();
 
     // write to disk
     // char buffer[256];

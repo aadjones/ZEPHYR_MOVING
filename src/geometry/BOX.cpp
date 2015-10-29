@@ -29,6 +29,7 @@ BOX::BOX(const VEC3F& center, const VEC3F& lengths, int framesPerRevolution) :
 {
   set_halfLengths();
   set_angularVelocity();
+  initializeRotationMatrix();
 }
 
 
@@ -40,24 +41,37 @@ BOX::~BOX()
 {
 }
 
+void BOX::initializeRotationMatrix()
+{
+  MATRIX3 eye = MATRIX3::I();
+  _rotation = eye;
+}
+
 void BOX::updateRotationMatrix()
 {
   // use the z-axis for rotation for now
   VEC3F axis(0.0, 0.0, 1.0);
-  float theta = _step * M_2_PI / float(_framesPerRevolution);
+  float theta = _step * 2 * M_PI / float(_framesPerRevolution);
+  printf("Theta: %f\n", theta);
   // we must rotate clockwise, hence the minus sign
-  _rotation.rotation(axis, -theta); 
+  _rotation = MATRIX3::rotation(axis, -theta);
 }
 
 bool BOX::inside(const VEC3F& point) 
 {
   // translate so that the center of rotation is the origin
   VEC3F pointTranslated = point - _center;
+  cout << "pointTranslated: " << endl;
+  cout << pointTranslated << endl;
+  cout << "halfLengths: " << endl;
+  cout << _halfLengths << endl;
   // rotate *clockwise* back to the original position
   pointTranslated = _rotation * pointTranslated;
-  return abs(pointTranslated[0]) <= _halfLengths[0] &&
-         abs(pointTranslated[1]) <= _halfLengths[1] &&
-         abs(pointTranslated[2]) <= _halfLengths[2];
+  cout << "pointTranslated, now rotated: " << endl;
+  cout << pointTranslated << endl;
+  return ( abs(pointTranslated[0]) <= _halfLengths[0] &&
+           abs(pointTranslated[1]) <= _halfLengths[1] &&
+           abs(pointTranslated[2]) <= _halfLengths[2] );
 }
 
 void BOX::update_r(const VEC3F& point, VEC3F* r)

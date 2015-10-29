@@ -40,6 +40,7 @@ public:
 
   void set_halfLengths() { _halfLengths = 0.5 * _lengths; };
 
+  void initializeRotationMatrix();
   void updateRotationMatrix();
 
   // update the time step since the box moves in time
