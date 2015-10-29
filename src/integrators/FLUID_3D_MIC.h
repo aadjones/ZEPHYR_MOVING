@@ -25,6 +25,7 @@
 #include <cmath>
 #include <iostream>
 #include "OBSTACLE.h"
+#include "BOX.h"
 #include "VEC3.h"
 #include "FIELD_3D.h"
 #include "VECTOR3_FIELD_3D.h"
@@ -45,7 +46,7 @@ public:
 
   void step();
   void stepWithObstacleSameOrder();
-  void stepWithMovingObstacle();
+  void stepWithMovingObstacle(BOX* box);
 
   int xRes() const { return _xRes; };
   int yRes() const { return _yRes; };
@@ -63,6 +64,7 @@ public:
   VEC3F  velocity(int i) const      { return _velocity(i); };
   VECTOR3_FIELD_3D& velocity()      { return _velocity; };
   VECTOR3_FIELD_3D& velocityOld()   { return _velocityOld; };
+  VectorXd& velocityNeumann()       { return _velocityNeumann; };
   VECTOR3_FIELD_3D& force()         { return _force; };
   VECTOR3_FIELD_3D& vorticity()     { return _vorticity; };
   FIELD_3D&         density()       { return _density; };
@@ -106,6 +108,12 @@ public:
   // create a procedural velocity field
   void generateProceduralVelocity();
 
+  // set the neumannIOP obstacle matrix
+  void setPeeledSparseMovingIOP(BOX* box);
+
+  // set the Neumann velocity by appending a 1 in the last entry
+  void setVelocityNeumann();
+
 protected:  
   // dimensions
   int _xRes, _yRes, _zRes, _maxRes;
@@ -126,9 +134,11 @@ protected:
   FIELD_3D _heatOld;
   FIELD_3D _pressure;
   FIELD_3D _divergence;
-	
+
+
   VECTOR3_FIELD_3D _velocity;
   VECTOR3_FIELD_3D _velocityOld;
+  VectorXd _velocityNeumann;
 
   VECTOR3_FIELD_3D _dudt0;
   VECTOR3_FIELD_3D _dudt1;
@@ -257,7 +267,6 @@ protected:
   // solver stuff
   void project();
   void projectIOP();
-  void matrixIOP(const VEC3I& center, double radius);
   void solvePoisson(FIELD_3D& field, FIELD_3D& b, unsigned char* skip, bool heat = false);
 	
   // handle obstacle boundaries
@@ -269,6 +278,7 @@ protected:
   // build the peeled IOP stomping matrix
   void buildPeeledSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius);
 
+ 
   // advect using first order semi-Lagrangian
   void advectStam();
   VEC3F cellCenter(int x, int y, int z);

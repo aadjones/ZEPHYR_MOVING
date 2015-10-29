@@ -56,16 +56,23 @@ bool animate = true;
 // fluid being simulated
 FLUID_3D_MIC* fluid = NULL;
 
+// moving obstacle
+BOX* box = NULL;
+
+// box parameters
+VEC3F boxCenter(0.5, 0.5, 0.5);
+VEC3F boxLengths(0.1, 0.2, 0.1);
+
+// angle for the box to revolve
+float g_angle = 0.0;
+int framesPerRevolution = 150;
+// horizontal displacement for the box
+float g_displacement = 0.0;
+
 // resolutions
 int xRes = 0;
 int yRes = 0;
 int zRes = 0;
-
-// angle for the fan to revolve
-float g_angle = 0.0;
-
-// horizontal displacement for the fan
-float g_displacement = 0.0;
 
 void runEverytime();
 
@@ -340,6 +347,8 @@ int main(int argc, char *argv[])
 	fluid = new FLUID_3D_MIC(xRes, yRes, zRes, amplify, &boundaries[0]);
   fluid->vorticityEps() = vorticity;
   fluid->snapshotPath() = snapshotPath;
+
+  box = new BOX(boxCenter, boxLengths, framesPerRevolution);
   
   glutInit(&argc, argv);
   glvuWindow();
@@ -360,7 +369,7 @@ void spin(int framesPerRevolution)
 // Move the glTranslate along sinusoidal displacement
 void displace(int framesPerCircuit, int step)
 {
-  g_displacement = 0.25 * sin(M_2_PI * step / framesPerCircuit);
+  g_displacement = 0.25 * sin(2 * M_PI * step / framesPerCircuit);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -377,16 +386,7 @@ void runEverytime()
 
     // Debugging code
     // ****************************************************************
-    VEC3F boxCenter(0.5, 0.5, 0.5);
-    VEC3F boxLengths(0.1, 0.2, 0.1);
-    VEC3F boxHalfLengths = 0.5 * boxLengths;
-    BOX myBox(boxCenter, boxLengths, 150);
-    myBox.update_step(75);
-    myBox.updateRotationMatrix();
-    VEC3F origin(0.5, 0.5, 0.5);
-    origin -= boxHalfLengths;
-    bool isInside = myBox.inside(origin);
-    printf("isInside called on origin: %d\n", isInside);
+
     // ****************************************************************
 
     firstTime = false;
@@ -395,7 +395,7 @@ void runEverytime()
   if (animate)
   {
     static int step = 0;
-    spin(150);
+    spin(framesPerRevolution);
     // displace(60, step);
 
 
@@ -404,7 +404,7 @@ void runEverytime()
     fluid->addSmokeColumn();
 
     
-    // fluid->stepWithMovingObstacle();
+    fluid->stepWithMovingObstacle(box);
 
     // write to disk
     // char buffer[256];
@@ -421,7 +421,7 @@ void runEverytime()
       if (captureMovie)
       {
        // write out the movie
-       // movie.writeMovie("movieObstacle.mov");
+       movie.writeMovie("movieObstacle.mov");
 
       // reset the movie object
       movie = QUICKTIME_MOVIE();
@@ -437,6 +437,7 @@ void runEverytime()
     //  TIMER::printTimings();
 
     step++;
+    box->update_step(step);
   }
 }
 

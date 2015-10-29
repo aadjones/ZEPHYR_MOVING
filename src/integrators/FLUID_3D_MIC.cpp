@@ -318,14 +318,10 @@ void FLUID_3D_MIC::stepWithObstacleSameOrder()
 // 3) diffusion
 // 4) boundary + pressure project (IOP)
 //////////////////////////////////////////////////////////////////////
-void FLUID_3D_MIC::stepWithMovingObstacle()
+void FLUID_3D_MIC::stepWithMovingObstacle(BOX* box)
 {
   Real goalTime = 0.1;
   Real currentTime = 0;
-
-  // variables for the IOP obstacle
-  // VEC3I center(_xRes/2, _yRes/2, _zRes/2);
-  // double radius = 0.1;
 
   // compute the CFL condition
   _dt = goalTime;
@@ -338,7 +334,8 @@ void FLUID_3D_MIC::stepWithMovingObstacle()
   _density.setZeroBorder();
 
   // compute the forces
-  // addBuoyancy(_heat.data());
+  // ADJ: might want to remove buoyancy for the new sim
+  addBuoyancy(_heat.data());
   _velocity.axpy(_dt, _force);
   _force.clear();
 
@@ -365,17 +362,14 @@ void FLUID_3D_MIC::stepWithMovingObstacle()
   _preprojection = _velocity;
 
   // let's test IOP with the full matrix
-
-  // if the matrix isn't built yet, build it
-  // if (_peeledIOP.cols() <= 0) {
-    // buildPeeledSparseIOP(_peeledIOP, center, radius);
-  // }
-
+ 
+  setPeeledSparseMovingIOP(box);
   //////////////////////////////////////////////////////////////////////
-  // cout << "_peeledIOP dims: " << "(" << _peeledIOP.rows() << ", " << _peeledIOP.cols() << ")" << endl;
-  // VectorXd afterIOP = _peeledIOP * _velocity.peelBoundary().flattenedEigen();
-  // cout << "Did sparse matrix-vector multiply for IOP!" << endl;
-  // _velocity.setWithPeeled(afterIOP);
+  cout << "_neumannIOP dims: " << "(" << _neumannIOP.rows() << ", " << _neumannIOP.cols() << ")" << endl;
+  setVelocityNeumann();
+  VectorXd afterIOP = _neumannIOP * _velocityNeumann; 
+  cout << "Did sparse matrix-vector multiply for IOP!" << endl;
+  _velocity.setWithPeeled(afterIOP);
   //////////////////////////////////////////////////////////////////////
   
   // store the postIOP velocity (QUESTION: before or after the project?)
@@ -1302,25 +1296,6 @@ void FLUID_3D_MIC::buildPeeledDampingMatrixFull()
       }
 }
 
-void FLUID_3D_MIC::buildSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius)
-{
-  // assert ( radius < _lengths.maxElement() ); 
-  A = SPARSE_MATRIX(3 * _totalCells, 3 * _totalCells);
-  A.setToIdentity();
-  VEC3F centerCoords = cellCenter(center[0], center[1], center[2]);
-  int index = 0;
-  for (int z = 1; z < _zRes - 1; z++) {
-    for (int y = 1; y < _yRes - 1; y++) {
-      for (int x = 1; x < _xRes - 1; x++) {
-        for (int i = 0; i < 3; i++, index++) {
-          if ( norm2(cellCenter(x, y, z) - centerCoords) < radius * radius ) {
-          A(index, index) = 0.0;
-          }
-        }
-      }
-    }
-  }        
-}
 
 void FLUID_3D_MIC::buildPeeledSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius) 
 {
@@ -1645,6 +1620,65 @@ void FLUID_3D_MIC::appendStreamsIOP() const
   cout << " done. " << endl;
 }
 
+// set the neumannIOP obstacle matrix
+void FLUID_3D_MIC::setPeeledSparseMovingIOP(BOX* box) 
+{
+  TIMER functionTimer(__FUNCTION__);
+  // if it's the first time this function is called, resize _neumannIOP.
+  // it has an extra homoegenous coordinate column
+  if (_neumannIOP.cols() <= 0) {
+     _neumannIOP = SPARSE_MATRIX(3 * (_xRes - 2) * (_yRes - 2) * (_zRes - 2),
+                    1 + 3 * (_xRes - 2) * (_yRes - 2) * (_zRes - 2));
+  }
+  // setToIdentity still works on rectangular (non-square) matrices
+  _neumannIOP.setToIdentity();
+  int index = 0;
+  int lastCol = _neumannIOP.cols() - 1;
+  VEC3F r(0.0, 0.0, 0.0);
+  VEC3F point(0.0, 0.0, 0.0);
+  VEC3F* velocityPointer = box->get_velocity();
+
+  // rotation matrix changes per step and must be updated
+  // before calling box->inside
+  box->update_rotationMatrix();
+
+  for (int z = 1; z < _zRes - 1; z++) {
+    for (int y = 1; y < _yRes - 1; y++) {
+      for (int x = 1; x < _xRes - 1; x++) {
+        for (int i = 0; i < 3; i++, index++) {
+          point = this->cellCenter(x, y, z);
+          // if point is in the interior of the obstacle
+          if ( box->inside(point) ) {
+            _neumannIOP(index, index) = 0.0;
+            // update the radial and linear velocities
+            box->update_r(point, &r);
+            box->update_linearVelocity(r);
+            if (i == 0) {
+              _neumannIOP(index, lastCol) = (*velocityPointer)[0];
+            }
+            else if (i == 1) {
+              _neumannIOP(index, lastCol) = (*velocityPointer)[1];
+            }
+            else {
+              _neumannIOP(index, lastCol) = (*velocityPointer)[2];
+            }
+          }
+        }
+      }
+    }
+  }        
+}
+
+// set the Neumann velocity from the velocity by appending a 1
+void FLUID_3D_MIC::setVelocityNeumann()
+{
+  int peeledDims = 3 * (_xRes - 2) * (_yRes - 2) * (_zRes - 2);
+  _velocityNeumann.resize(1 + peeledDims);
+  _velocityNeumann.head(peeledDims) = _velocity.peelBoundary().flattenedEigen();
+  _velocityNeumann[peeledDims] = 1.0;
+}
+
+// compute the spatial coordinates from integer indexing
 VEC3F FLUID_3D_MIC::cellCenter(int x, int y, int z)
 {
   TIMER functionTimer(__FUNCTION__);
@@ -1668,10 +1702,5 @@ VEC3F FLUID_3D_MIC::cellCenter(int x, int y, int z)
   final[2] += dz * 0.5;
 
   return final;
-}
-
-
-void FLUID_3D_MIC::matrixIOP(const VEC3I& center, double radius)
-{
 }
 

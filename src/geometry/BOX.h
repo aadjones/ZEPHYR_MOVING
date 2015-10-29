@@ -40,8 +40,8 @@ public:
 
   void set_halfLengths() { _halfLengths = 0.5 * _lengths; };
 
-  void initializeRotationMatrix();
-  void updateRotationMatrix();
+  void initialize_rotationMatrix();
+  void update_rotationMatrix();
 
   // update the time step since the box moves in time
   void update_step(int step) { _step = step; };
@@ -64,6 +64,9 @@ public:
   void update_linearVelocity(const VEC3F& r) {
   _velocity = cross(_angularVelocity, r);
   };
+
+  // get a pointer to velocity
+  VEC3F* get_velocity() { return &(_velocity); }
 
 protected:
   VEC3F _center;
