@@ -65,7 +65,7 @@ VEC3F boxLengths(0.1, 0.2, 0.1);
 
 // angle for the box to revolve
 float g_angle = 0.0;
-int framesPerRevolution = 150;
+int framesPerRevolution = 75;
 // horizontal displacement for the box
 float g_displacement = 0.0;
 

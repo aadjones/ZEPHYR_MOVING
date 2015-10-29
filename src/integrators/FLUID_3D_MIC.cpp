@@ -364,13 +364,9 @@ void FLUID_3D_MIC::stepWithMovingObstacle(BOX* box)
   // let's test IOP with the full matrix
  
   setPeeledSparseMovingIOP(box);
-  //////////////////////////////////////////////////////////////////////
-  cout << "_neumannIOP dims: " << "(" << _neumannIOP.rows() << ", " << _neumannIOP.cols() << ")" << endl;
   setVelocityNeumann();
   VectorXd afterIOP = _neumannIOP * _velocityNeumann; 
-  cout << "Did sparse matrix-vector multiply for IOP!" << endl;
   _velocity.setWithPeeled(afterIOP);
-  //////////////////////////////////////////////////////////////////////
   
   // store the postIOP velocity (QUESTION: before or after the project?)
   _postIOP = _velocity;
@@ -1686,7 +1682,13 @@ VEC3F FLUID_3D_MIC::cellCenter(int x, int y, int z)
   VEC3F halfLengths(0.5, 0.5, 0.5); 
 
   // set it to the lower corner
-  VEC3F final = _center - halfLengths;
+  // **********************************************************************
+  // ADJ: commenting this out for now. might break the static obstacle code
+  // probably the variable _center was not (0.5, 0.5, 0.5) as expected?
+  // VEC3F final = _center - halfLengths;
+  // **********************************************************************
+
+  VEC3F final(0.0, 0.0, 0.0);
 
   double dx = 1.0 / _xRes;
   double dy = 1.0 / _yRes;
