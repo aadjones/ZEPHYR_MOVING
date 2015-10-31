@@ -683,7 +683,8 @@ void FLUID_3D_MIC::addVorticity()
 void FLUID_3D_MIC::advectStam()
 {
   TIMER functionTimer(__FUNCTION__);
-	VEC3I res = VEC3I(_xRes,_yRes,_zRes);
+	// ADJ: this variable 'res' is unused?
+  VEC3I res = VEC3I(_xRes,_yRes,_zRes);
 
 	if(_domainBcLeft == 0) 
     _velocity.copyBorderX();

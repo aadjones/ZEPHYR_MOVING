@@ -64,7 +64,7 @@ VEC3F boxCenter(0.5, 0.5, 0.5);
 VEC3F boxLengths(0.1, 0.2, 0.1);
 
 // period over which the box revolves
-double period = 4.0;
+double period = 8.0;
 
 // horizontal displacement for the box
 // TODO: implement and integrate this into BOX class
@@ -282,8 +282,9 @@ int glvuWindow()
   glEnable (GL_BLEND);
   glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+  // ADJ: modify the Eye vector to change the scene's perspective
   glvuVec3f ModelMin(-10,-10,-10), ModelMax(10,10,10), 
-        Eye(0.5,0.5,2), LookAtCntr(0.5,0.5,0.5),  Up(0,1,0);
+        Eye(1.5,0.5,2), LookAtCntr(0.5,0.5,0.5),  Up(0,1,0);
 
   float Yfov = 45;
   float Aspect = 1;
@@ -416,8 +417,7 @@ void runEverytime()
     exit(0);
     }
  
-    // if (step % 10 == 0)
-    //  TIMER::printTimings();
+    if (step % 10 == 0) TIMER::printTimings();
 
     step++;
   }

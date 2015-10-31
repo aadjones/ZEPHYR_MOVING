@@ -35,7 +35,6 @@ BOX::BOX(const VEC3F& center, const VEC3F& lengths, double period) :
   _rotationAxis = VEC3F(0.0, 0.0, 1.0);
 }
 
-
 BOX::BOX() 
 {
 }
@@ -52,30 +51,42 @@ void BOX::initialize_rotationMatrix()
 
 void BOX::update_rotationMatrix()
 {
-  // we must rotate clockwise, hence the minus sign
+  // we must rotate *clockwise*, hence the minus sign
   _rotation = MATRIX3::rotation(_rotationAxis, -1 * _theta);
 }
 
 bool BOX::inside(const VEC3F& point) 
 {
   // translate so that the center of rotation is the origin
-  VEC3F pointTranslated = point - _center;
+  VEC3F pointTransformed = point - _center;
+  // cout << "pointTransformed after translation: " << endl;
+  // cout << pointTransformed << endl;
   // rotate *clockwise* back to the original position
-  pointTranslated = _rotation * pointTranslated;
-  return ( abs(pointTranslated[0]) <= _halfLengths[0] &&
-           abs(pointTranslated[1]) <= _halfLengths[1] &&
-           abs(pointTranslated[2]) <= _halfLengths[2] );
+  pointTransformed = _rotation * pointTransformed;
+  // cout << "pointTransformed after rotation: " << endl;
+  // cout << pointTransformed << endl;
+
+  return ( fabs(pointTransformed[0]) <= _halfLengths[0]  &&
+           fabs(pointTransformed[1]) <= _halfLengths[1]  &&
+           fabs(pointTransformed[2]) <= _halfLengths[2] );
+
 }
 
 void BOX::update_r(const VEC3F& point, VEC3F* r)
 {
-  *r = point - _center;
+  VEC3F u = point - _center;
+  // we want to project u onto the plane z = z0
+  // this plane has unit normal n = (0, 0, 1)
+  // so we project u onto this unit normal and then subtract off that component
+  VEC3F normalComponent = project_onto(u, _rotationAxis);
+  *r = u - normalComponent;
 }
 
 void BOX::spin() 
 {
   float d_theta = 2 * M_PI * _dt / _period;
   _theta += d_theta;
+  // printf("Theta is updated to: %f\n", _theta);
   // work modulo 2pi
   if (_theta >= 2 * M_PI) { _theta = 0.0; };
   this->update_time();

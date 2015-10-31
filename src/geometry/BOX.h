@@ -23,7 +23,6 @@
 #include <glvu.h>
 #include "VEC3.h"
 #include "MATRIX3.h"
-#include "FIELD_3D.h"
 #include <iostream>
 
 class BOX 
@@ -51,14 +50,15 @@ public:
   // is the passed in point inside the box?
   bool inside(const VEC3F& point);
 
-  // compute the radial vector from a point to the center of rotation of the box
+  // compute the radial vector from a point to the line determined
+  // by the axis of rotation of the box
   void update_r(const VEC3F& point, VEC3F* r);
 
   // set a constant angular velocity, assuming an axis of rotation (0,0,1)
   void set_angularVelocity() {
   _angularVelocity[0] = 0.0;
   _angularVelocity[1] = 0.0;
-  _angularVelocity[2] = M_2_PI / _period;
+  _angularVelocity[2] = 2 * M_PI / _period;
   };
 
   // compute what angle we have rotated through given the current time
@@ -71,8 +71,11 @@ public:
   // it is assumed that the center of rotation is the (translated) origin
   void update_linearVelocity(const VEC3F& r) { _velocity = cross(_angularVelocity, r); };
 
-  // get a pointer to velocity
+  // getters to pointers
   VEC3F* get_velocity() { return &(_velocity); }
+ 
+  // a *clockwise* rotation matrix
+  MATRIX3* get_rotation() { return &(_rotation); }
 
   // spin the box around a fixed axis of rotation
   void spin();
