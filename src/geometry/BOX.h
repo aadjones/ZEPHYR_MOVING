@@ -28,7 +28,7 @@
 class BOX 
 {
 public:
-  BOX(const VEC3F& center, const VEC3F& lengths, double period);
+  BOX(const VEC3F& center, const VEC3F& lengths, double period, double translationPeriod);
 	BOX();
 	~BOX();
 
@@ -39,6 +39,7 @@ public:
 
   void set_halfLengths() { _halfLengths = 0.5 * _lengths; };
 
+  // time step should be in lock-step with FLUID_3D_MIC
   void set_dt(double dt) { _dt = dt; };
 
   void initialize_rotationMatrix();
@@ -61,15 +62,16 @@ public:
   _angularVelocity[2] = 2 * M_PI / _period;
   };
 
-  // compute what angle we have rotated through given the current time
-  void update_theta() { _theta = _currentTime * 2 * M_PI / _period; }
-
   // convert to degrees for OpenGL
   double thetaDegrees() const { return _theta * 360 / (2 * M_PI); } 
 
   // compute the linear velocity from the angular velocity and passed in radial direction
   // it is assumed that the center of rotation is the (translated) origin
-  void update_linearVelocity(const VEC3F& r) { _velocity = cross(_angularVelocity, r); };
+  void update_linearVelocity(const VEC3F& r) 
+  { 
+    _velocity = cross(_angularVelocity, r) + _displacement;
+  };
+
 
   // getters to pointers
   VEC3F* get_velocity() { return &(_velocity); }
@@ -80,6 +82,9 @@ public:
   // spin the box around a fixed axis of rotation
   void spin();
 
+  // translate the box along a horizontal line
+  void translate_center();
+
   // draw to OpenGL
   void draw() const;
 
@@ -87,16 +92,22 @@ public:
 
 protected:
   VEC3F _center;
+  VEC3F _original_center;
   VEC3F _lengths;
   VEC3F _halfLengths;
   VEC3F _rotationAxis;
 
   VEC3F _angularVelocity;
   VEC3F _velocity;
+  VEC3F _displacement;
   MATRIX3 _rotation;
 
   double _theta;
   double _period;
+
+  double _phi;
+  double _translationPeriod;
+
   double _currentTime;
   double _dt;
 

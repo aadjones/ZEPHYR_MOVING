@@ -64,7 +64,10 @@ VEC3F boxCenter(0.5, 0.5, 0.5);
 VEC3F boxLengths(0.1, 0.2, 0.1);
 
 // period over which the box revolves
-double period = 8.0;
+double period = 4.0;
+
+// period over which the box translates
+double translationPeriod = 10.0;
 
 // horizontal displacement for the box
 // TODO: implement and integrate this into BOX class
@@ -163,6 +166,8 @@ void glutDisplay()
 
     // spin the box around a constant axis
     box->spin();
+    box->translate_center();
+    box->update_time();
 
   glvu.EndFrame();
   if (captureMovie) {
@@ -349,7 +354,7 @@ int main(int argc, char *argv[])
   fluid->vorticityEps() = vorticity;
   fluid->snapshotPath() = snapshotPath;
 
-  box = new BOX(boxCenter, boxLengths, period);
+  box = new BOX(boxCenter, boxLengths, period, translationPeriod);
   double dt = fluid->dt();
   box->set_dt(dt);
   

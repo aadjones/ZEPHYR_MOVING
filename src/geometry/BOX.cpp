@@ -24,15 +24,18 @@
 //////////////////////////////////////////////////////////////////////
 
 
-BOX::BOX(const VEC3F& center, const VEC3F& lengths, double period) :
-  _center(center), _lengths(lengths), _period(period)
+BOX::BOX(const VEC3F& center, const VEC3F& lengths, double period, double translationPeriod) :
+  _center(center), _lengths(lengths), _period(period), _translationPeriod(translationPeriod)
 {
   set_halfLengths();
   set_angularVelocity();
   initialize_rotationMatrix();
   _theta = 0.0;
+  _phi = 0.0;
   _currentTime = 0.0;
   _rotationAxis = VEC3F(0.0, 0.0, 1.0);
+  _displacement = VEC3F(0.0, 0.0, 0.0);
+  _original_center = _center;
 }
 
 BOX::BOX() 
@@ -59,12 +62,8 @@ bool BOX::inside(const VEC3F& point)
 {
   // translate so that the center of rotation is the origin
   VEC3F pointTransformed = point - _center;
-  // cout << "pointTransformed after translation: " << endl;
-  // cout << pointTransformed << endl;
   // rotate *clockwise* back to the original position
   pointTransformed = _rotation * pointTransformed;
-  // cout << "pointTransformed after rotation: " << endl;
-  // cout << pointTransformed << endl;
 
   return ( fabs(pointTransformed[0]) <= _halfLengths[0]  &&
            fabs(pointTransformed[1]) <= _halfLengths[1]  &&
@@ -84,13 +83,23 @@ void BOX::update_r(const VEC3F& point, VEC3F* r)
 
 void BOX::spin() 
 {
-  float d_theta = 2 * M_PI * _dt / _period;
+  double d_theta = 2 * M_PI * _dt / _period;
   _theta += d_theta;
   // printf("Theta is updated to: %f\n", _theta);
   // work modulo 2pi
   if (_theta >= 2 * M_PI) { _theta = 0.0; };
-  this->update_time();
+  this->update_rotationMatrix();
 }
+
+void BOX::translate_center()
+{
+  double d_phi= 2 * M_PI * _dt / _translationPeriod;
+  _phi += d_phi;
+  if (_phi >= 2 * M_PI) { _phi = 0.0; };
+  _displacement[0] = 0.25 * sin(_phi);
+  _center[0] = _original_center[0] + _displacement[0];
+}
+
 
 void BOX::draw() const
 {

@@ -683,8 +683,7 @@ void FLUID_3D_MIC::addVorticity()
 void FLUID_3D_MIC::advectStam()
 {
   TIMER functionTimer(__FUNCTION__);
-	// ADJ: this variable 'res' is unused?
-  VEC3I res = VEC3I(_xRes,_yRes,_zRes);
+	VEC3I res = VEC3I(_xRes,_yRes,_zRes);
 
 	if(_domainBcLeft == 0) 
     _velocity.copyBorderX();
@@ -1668,7 +1667,7 @@ void FLUID_3D_MIC::setPeeledSparseMovingIOP(BOX* box)
 
   // rotation matrix changes per step and must be updated
   // before calling box->inside
-  box->update_rotationMatrix();
+  // box->update_rotationMatrix();
 
   for (int z = 1; z < _zRes - 1; z++) {
     for (int y = 1; y < _yRes - 1; y++) {
