@@ -164,10 +164,7 @@ void glutDisplay()
       box->draw();
     glPopMatrix();
 
-    // spin the box around a constant axis
-    box->spin();
-    box->translate_center();
-    box->update_time();
+  
 
   glvu.EndFrame();
   if (captureMovie) {
@@ -395,6 +392,12 @@ void runEverytime()
 
     fluid->addSmokeColumn();
     fluid->stepWithMovingObstacle(box);
+
+    // move the box along a horizontal translation and spin it around a constant axis
+    box->translate_center();
+    box->spin();
+
+    box->update_time();
 
     // write to disk
     // char buffer[256];
