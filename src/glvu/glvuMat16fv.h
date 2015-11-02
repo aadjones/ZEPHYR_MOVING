@@ -143,7 +143,7 @@ inline float* Rotate16fv(float *M, float DegAng, const float Axis[3])
    float l = Axis[0]*Axis[0]+Axis[1]*Axis[1]+Axis[2]*Axis[2];
    float x, y, z;
    x=Axis[0],y=Axis[1],z=Axis[2];
-   if (l > 1.0001f || l < 0.9999f && l!=0)
+   if (l > 1.0001f || (l < 0.9999f && l!=0))
    {
      // needs normalization
      l=1.0f/(float)sqrt(l);
