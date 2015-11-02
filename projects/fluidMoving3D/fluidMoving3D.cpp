@@ -60,18 +60,14 @@ FLUID_3D_MIC* fluid = NULL;
 BOX* box = NULL;
 
 // box parameters
-VEC3F boxCenter(0.5, 0.5, 0.5);
-VEC3F boxLengths(0.1, 0.2, 0.1);
+const VEC3F boxCenter(0.5, 0.5, 0.5);
+const VEC3F boxLengths(0.1, 0.2, 0.15);
 
 // period over which the box revolves
-double period = 4.0;
+const double period = 4.0;
 
 // period over which the box translates
-double translationPeriod = 10.0;
-
-// horizontal displacement for the box
-// TODO: implement and integrate this into BOX class
-// float g_displacement = 0.0;
+const double translationPeriod = 10.0;
 
 // resolutions
 int xRes = 0;
@@ -79,6 +75,8 @@ int yRes = 0;
 int zRes = 0;
 
 void runEverytime();
+// helper function to write unique filenames
+bool fileExists(const string& filename);
 
 vector<VECTOR> snapshots;
 
@@ -361,13 +359,6 @@ int main(int argc, char *argv[])
   return 1;
 }
 
-// TODO: integrate this inside BOX class  
-// Move the glTranslate along sinusoidal displacement
-// void displace(int framesPerCircuit, int step)
-// {
-  // g_displacement = 0.25 * sin(2 * M_PI * step / framesPerCircuit);
-// }
-
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 void runEverytime()
@@ -394,6 +385,7 @@ void runEverytime()
     fluid->stepWithMovingObstacle(box);
 
     // move the box along a horizontal translation and spin it around a constant axis
+    // code is implemented in such a way that the translation such occur *first*
     box->translate_center();
     box->spin();
 
@@ -414,20 +406,41 @@ void runEverytime()
       if (captureMovie)
       {
        // write out the movie
-       movie.writeMovie("movieObstacle.mov");
+        int i = 0;
+        char buffer[256];
+        sprintf(buffer, "movieObstacle%i.mov", i);
+        string movieString(buffer);
 
-      // reset the movie object
-      movie = QUICKTIME_MOVIE();
-
-     // stop capturing frames
-     captureMovie = false;
-     }
-    exit(0);
+        while (fileExists(movieString)) {
+          i++;
+          sprintf(buffer, "movieObstacle%i.mov", i);
+          movieString = string(buffer);
+        }
+        movie.writeMovie(movieString.c_str());
+        // reset the movie object
+        movie = QUICKTIME_MOVIE();
+        // stop capturing frames
+        captureMovie = false;
+      }
+      exit(0);
     }
- 
     if (step % 10 == 0) TIMER::printTimings();
-
     step++;
   }
+}
+
+//////////////////////////////////////////////////////////////////////
+// helper function: check of a file exists
+//////////////////////////////////////////////////////////////////////
+bool fileExists(const string& filename)
+{
+  FILE* file;
+  file = fopen(filename.c_str(), "rb");
+  
+  if (file == NULL)
+    return false;
+
+  fclose(file);
+  return true;
 }
 

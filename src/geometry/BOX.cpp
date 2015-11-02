@@ -33,6 +33,7 @@ BOX::BOX(const VEC3F& center, const VEC3F& lengths, double period, double transl
   _theta = 0.0;
   _phi = 0.0;
   _currentTime = 0.0;
+  _dt = 0.0;
   _rotationAxis = VEC3F(0.0, 0.0, 1.0);
   _displacement = VEC3F(0.0, 0.0, 0.0);
   _original_center = _center;
@@ -96,6 +97,8 @@ void BOX::translate_center()
   double d_phi= 2 * M_PI * _dt / _translationPeriod;
   _phi += d_phi;
   if (_phi >= 2 * M_PI) { _phi = 0.0; };
+  // move along a sinusoidally controlled horizontal path of length 0.5,
+  // centered at _original_center[0]
   _displacement[0] = 0.25 * sin(_phi);
   _center[0] = _original_center[0] + _displacement[0];
 }

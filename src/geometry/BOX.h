@@ -32,6 +32,7 @@ public:
 	BOX();
 	~BOX();
 
+  // setters
   void set_center(const VEC3F& center) { _center = center; };
 
   // set the x-, y-, and z-dimensions of the box
@@ -46,7 +47,12 @@ public:
   void update_rotationMatrix();
 
   // update the time step since the box moves in time
-  void update_time() { _currentTime += _dt; };
+  void update_time()
+  { 
+    assert(_dt > 0);
+    _currentTime += _dt; 
+  };
+
 
   // is the passed in point inside the box?
   bool inside(const VEC3F& point);
@@ -72,8 +78,7 @@ public:
     _velocity = cross(_angularVelocity, r) + _displacement;
   };
 
-
-  // getters to pointers
+  // getters
   VEC3F* get_velocity() { return &(_velocity); }
  
   // a *clockwise* rotation matrix
