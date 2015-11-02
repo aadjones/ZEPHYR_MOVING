@@ -61,7 +61,7 @@ BOX* box = NULL;
 
 // box parameters
 const VEC3F boxCenter(0.5, 0.5, 0.5);
-const VEC3F boxLengths(0.1, 0.2, 0.15);
+const VEC3F boxLengths(0.4, 0.05, 0.15);
 
 // period over which the box revolves
 const double period = 4.0;
