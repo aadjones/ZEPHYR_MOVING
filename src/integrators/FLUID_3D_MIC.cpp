@@ -1594,7 +1594,6 @@ void FLUID_3D_MIC::appendStreamsIOP() const
   {
     fwrite((void*)(velocity.data()), sizeof(double), cols, filePreadvect);
     finalRows[3]++;
-    cout << "preadvection size: " << "(" << cols << ", " << finalRows[3] << ")" << endl;
   }
  
   if (usingIOP)
@@ -1604,7 +1603,6 @@ void FLUID_3D_MIC::appendStreamsIOP() const
     {
       fwrite((void*)(velocity.data()), sizeof(double), cols, fileIOP);
       finalRows[4]++;
-      cout << "IOP rows is now: " << finalRows[4] << endl;
     }
   }
 

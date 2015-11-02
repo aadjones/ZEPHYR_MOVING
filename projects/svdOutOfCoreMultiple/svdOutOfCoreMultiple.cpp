@@ -54,7 +54,6 @@ void verifyResults(string filenamePrefix, string finalU)
   string filename = filenamePrefix + string(".transpose");
   FILE* file = fopen(filename.c_str(), "rb");
 
-  //for (int x = 0; x < 25; x++)
   for (int x = 0; x < 10; x++)
   {
     VectorXd column(U.rows());
@@ -93,7 +92,6 @@ int main(int argc, char *argv[])
   double discardThreshold = parser.getFloat("discard threshold", 1e-9);
 
   bool usingIOP = parser.getBool("iop", false);
-  // bool usingIOP = true;
 
   if (usingIOP)
     cout << " Using IOP " << endl;
