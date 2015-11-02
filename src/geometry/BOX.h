@@ -71,11 +71,15 @@ public:
   // convert to degrees for OpenGL
   double thetaDegrees() const { return _theta * 360 / (2 * M_PI); } 
 
+  // compute the displacement velocity based on the current value of phi 
+  void calculate_displacementVelocity();
+
   // compute the linear velocity from the angular velocity and passed in radial direction
   // it is assumed that the center of rotation is the (translated) origin
   void update_linearVelocity(const VEC3F& r) 
   { 
-    _velocity = cross(_angularVelocity, r) + _displacement;
+    calculate_displacementVelocity();
+    _velocity = cross(_angularVelocity, r) + _displacementVelocity;
   };
 
   // getters
@@ -105,6 +109,7 @@ protected:
   VEC3F _angularVelocity;
   VEC3F _velocity;
   VEC3F _displacement;
+  VEC3F _displacementVelocity;
   MATRIX3 _rotation;
 
   double _theta;

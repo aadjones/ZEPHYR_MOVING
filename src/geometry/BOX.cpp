@@ -36,6 +36,7 @@ BOX::BOX(const VEC3F& center, const VEC3F& lengths, double period, double transl
   _dt = 0.0;
   _rotationAxis = VEC3F(0.0, 0.0, 1.0);
   _displacement = VEC3F(0.0, 0.0, 0.0);
+  _displacementVelocity = VEC3F(0.0, 0.0, 0.0);
   _original_center = _center;
 }
 
@@ -81,6 +82,17 @@ void BOX::update_r(const VEC3F& point, VEC3F* r)
   VEC3F normalComponent = project_onto(u, _rotationAxis);
   *r = u - normalComponent;
 }
+
+void BOX::calculate_displacementVelocity()
+{
+  // The position equation for the displacement in the x coordinate is:
+  // x(t) = 1/4 * sin(2pi t / T), where T is the translation period.
+  // Hence, the velocity v(t) is given by x'(t) as follows:
+  // v(t) = 1/4 * 2pi / T * cos(2pi t / T)
+  // Since phi will be updated according to phi_t = 2pi t / T, we simply use phi.
+  _displacementVelocity[0] = 0.25 * 2 * M_PI / _translationPeriod * cos(_phi);
+}
+
 
 void BOX::spin() 
 {
