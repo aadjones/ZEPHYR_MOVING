@@ -392,11 +392,11 @@ void runEverytime()
     box->update_time();
 
     // write to disk
-    // char buffer[256];
-    // sprintf(buffer, "%sfluid.%04i.fluid3d", snapshotPath.c_str(), steps);
-    // string filename(buffer);
-    // fluid->writeGz(filename);
-    // fluid->appendStreamsIOP();
+    char buffer[256];
+    sprintf(buffer, "%sfluid.%04i.fluid3d", snapshotPath.c_str(), step);
+    string filename(buffer);
+    fluid->writeGz(filename);
+    fluid->appendStreamsIOP();
    
     // check if we're done
     if (step == simulationSnapshots)
