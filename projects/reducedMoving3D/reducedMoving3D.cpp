@@ -397,10 +397,16 @@ void runEverytime()
   {
     static int step = 0;
     cout << " Simulation step " << step << endl;
-    fluid->addSmokeColumn();
+
+    if (step == 0) { fluid->addSmokeSphere(); }
 
     // the splitting is not permuted in this method
-    fluid->stepObstacleSameOrder();
+    fluid->stepMovingObstacle(box);
+
+    box->translate_center();
+    box->spin();
+
+    box->update_time();
     
     /* 
     char buffer[256];

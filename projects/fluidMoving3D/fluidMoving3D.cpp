@@ -394,13 +394,11 @@ void runEverytime()
     box->update_time();
 
     // write to disk
-    /*
     char buffer[256];
     sprintf(buffer, "%sfluid.%04i.fluid3d", snapshotPath.c_str(), step);
     string filename(buffer);
     fluid->writeGz(filename);
     fluid->appendStreamsIOP();
-    */
     
     // print timings periodically
     if (step % 10 == 0) { TIMER::printTimings(); }

@@ -363,189 +363,6 @@ void SUBSPACE_FLUID_3D_EIGEN::stepReorderedCubatureStamTest()
 
 //////////////////////////////////////////////////////////////////////
 // The reduced solver, with peeled boundaries, with an obstacle, 
-// with cubature enabled
-//////////////////////////////////////////////////////////////////////
-void SUBSPACE_FLUID_3D_EIGEN::stepObstacleReorderedCubatureStam()
-{
-  TIMER functionTimer(__FUNCTION__);
-  VECTOR::printVertical = false;
-
-  Real goalTime = 0.1;
-  Real currentTime = 0;
-
-  // compute the CFL condition
-  _dt = goalTime;
-
-  // wipe forces
-  _force.clear();
-
-  // make a copy of velocity and density for ground truth
-  // VECTOR3_FIELD_3D velocityTrue = _velocity;
-  // FIELD_3D densityTrue = _density;
-  // wipe boundaries
-  _velocity.setZeroBorder();
-  // velocityTrue.setZeroBorder();
-
-  ////////////////////////////////////////////////////////////////////
-  // QUESTION: do I need to wipe density border as well?
-  // (doesn't seem to matter since advectHeatAndDensityStam
-  // does it for you)
-  // _density.setZeroBorder();
-  // densityTrue.setZeroBorder();
-  ////////////////////////////////////////////////////////////////////
-
-  // compute the forces
-  addBuoyancy(_heat.data());
-  _velocity.axpy(_dt, _force);
-  // velocityTrue.axpy(_dt, _force);
-  _force.clear();
-
-  addVorticity();
-  _velocity.axpy(_dt, _force);
-  // velocityTrue.axpy(_dt, _force);
-  
-  // cout << "Adding forces. \n";
-  // diffTruth(velocityTrue, densityTrue); 
- 
-  VEC3I center(_xRes/2, _yRes/2, _zRes/2);
-  const double radius = 0.1;
-
-  // if it's not build, construct the full IOP matrix (for debugging)
-  // if (_peeledIOP.cols() <= 0) {
-  //  buildPeeledSparseIOP(_peeledIOP, center, radius);
-  // }
-  // VectorXd afterIOP = _peeledIOP * velocityTrue.peelBoundary().flattenedEigen();
-  // velocityTrue.setWithPeeled(afterIOP);
-
-  TIMER projectionTimer("Velocity projection");
-  ////////////////////////////////////////////////////////////////////
-  // QUESTION: is this the right initial value for _qDot?
-  _qDot = _velocity.peeledProject(_preprojectU);
-  // _qDot = _velocity.peeledProject(_preadvectU);
-  ////////////////////////////////////////////////////////////////////
-  projectionTimer.stop();
-
-  // reduced IOP
-  reducedSetZeroSphere();
-
-  ////////////////////////////////////////////////////////////////////
-  // QUESTION: not sure which basis with which to unproject
-  // ANSWER: use _iopU
-  // _velocity.peeledUnproject(_iopU, _qDot);
-  ////////////////////////////////////////////////////////////////////
-  
-  // cout << "Stomping boundaries test. \n";
-  // diffTruth(velocityTrue, densityTrue);
-  
-  // this will modify _velocity using a full space projection
-  // project();
-  // velocityTrue = _velocity;
-
-  ////////////////////////////////////////////////////////////////////
-  // QUESTION: am I using preprojectToPreadvect correctly?
-  reducedStagedProjectIOP();
-  // let's try it with the preprojectToFinal instead
-  // that's much worse...
-  // reducedStagedProject();
-  ////////////////////////////////////////////////////////////////////
-  
-  // _velocity.peeledUnproject(_preadvectU, _qDot);
-  // cout << "Pressure projection. \n";
-  // diffTruth(velocityTrue, densityTrue);
-  
-  // reduced advection shouldn't change for IOP
-
-  // grab the preadvected values of _velocity and _density
-  // VECTOR3_FIELD_3D preadvectVelocity = _velocity;
-  // FIELD_3D preadvectDensity = _density;
-  // FIELD_3D preadvectHeat = _heat;
-
-  // grab the preadvected values of the 'old' fields
-
-  // VECTOR3_FIELD_3D oldVelocity = _velocityOld;
-  // FIELD_3D oldDensity = _densityOld;
-  // FIELD_3D oldHeat = _heatOld;
-
-  ////////////////////////////////////////////////////////////////////
-  // full advection---modifies _velocity and _density
-
-  // *** this won't work because it actually also modifies ***
-  // *** _velocityOld and _densityOld, which will screw up ***
-  // *** the subsequent reduced space advection            ***
-
-  // advectStam();
-  // velocityTrue = _velocity;
-  // densityTrue = _density;
-  ////////////////////////////////////////////////////////////////////
-
-  ////////////////////////////////////////////////////////////////////
-  // reduced advection
-  // _velocity = preadvectVelocity;
-  // _density = preadvectDensity;
-  // _heat = preadvectHeat;
-
-  // _velocityOld = oldVelocity;
-  // _densityOld = oldDensity;
-  // _heatOld = oldHeat;
-
-  advectHeatAndDensityStam();
-  reducedAdvectStagedStamFast();
-  ////////////////////////////////////////////////////////////////////
-
-
-  ////////////////////////////////////////////////////////////////////
-  // comparing the reduced advection to full advection
-  // _velocity.peeledUnproject(_prediffuseU, _qDot);
-  // cout << "Advection projection. \n";
-  // diffTruth(velocityTrue, densityTrue);
-  ////////////////////////////////////////////////////////////////////
-
-
-  // reduced diffusion is also the same 
- 
-  // grab the post-advection velocity and density
-  // _velocity.peeledUnproject(_prediffuseU, _qDot);
-  // densityTrue = _density;
-  
-  ////////////////////////////////////////////////////////////////////
-  // Full-space diffusion
-  // if (_peeledDampingFull.rows() <= 0) {
-  //   buildPeeledDampingMatrixFull();
-  // }
-  // VectorXd after = _peeledDampingFull * _velocity.peelBoundary().flattenedEigen();
-  // _velocity.setWithPeeled(after);
-  // velocityTrue = _velocity;
-  ////////////////////////////////////////////////////////////////////
-
-  TIMER diffusionProjectionTimer("Diffusion projection");
-  reducedPeeledDiffusion();
-  diffusionProjectionTimer.stop();
-
-  // do the full space unprojection
-  TIMER unprojectionTimer("Velocity unprojection");
-  _velocity.peeledUnproject(_U, _qDot);
-  unprojectionTimer.stop();
-
-
-  ////////////////////////////////////////////////////////////////////
-  // full space comparison of diffusion
-  // cout << "Diffusion projection.\n";
-  // diffTruth(velocityTrue, densityTrue);
-  ////////////////////////////////////////////////////////////////////
-
-  currentTime += _dt;
-
-  cout << " Simulation step " << _totalSteps << " done. " << endl;
-
-	_totalTime += goalTime;
-	_totalSteps++;
-
-  // diff the current sim results against ground truth
-  diffGroundTruth();
-}
-
-//////////////////////////////////////////////////////////////////////
-// The reduced solver, with peeled boundaries, with an obstacle, 
 // with cubature enabled.
 // **No reordering of the splitting!**
 //////////////////////////////////////////////////////////////////////
@@ -559,6 +376,7 @@ void SUBSPACE_FLUID_3D_EIGEN::stepObstacleSameOrder()
 
   // variables for the obstacle 
   VEC3I center(_xRes/2, _yRes/2, _zRes/2);
+  // ADJ: radius is unused somehow.
   const double radius = 0.1;
 
   // compute the CFL condition
@@ -826,7 +644,8 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
 
   // reduced IOP
   TIMER iopTiming("IOP timing");
-  reducedSetZeroSphere();
+  // reducedSetZeroSphere();
+  reducedSetMovingBox(box);
 
   ////////////////////////////////////////////////////////////////////
   // obstacle stomping comparison
@@ -1039,6 +858,80 @@ void SUBSPACE_FLUID_3D_EIGEN::reducedSetZeroSphere()
   cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
   
 }
+
+//////////////////////////////////////////////////////////////////////
+// update the Neumann moving boundary condition complement matrix
+// and the Neumann homogeneous vector
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_EIGEN::setPeeledSparseMovingIOPComplement(BOX* box)
+{
+  TIMER functionTimer(__FUNCTION__);
+
+  int totalCells = 3 * (_xRes - 2) * (_yRes - 2) * (_zRes - 2);
+  // if it's the first time this function is called, resize _neumannIOPcomplement
+  if (_neumannIOPcomplement.cols() <= 0) {
+     _neumannIOPcomplement = SPARSE_MATRIX(totalCells, totalCells);
+     // set it to zeros on the diagonal since it is the complement
+     _neumannIOPcomplement.clear();
+  }
+ 
+  // if it's the first time, resize and zero out _neumannVector
+  if (_neumannVector.size() <= 0) {
+    _neumannVector = VectorXd::Zero(totalCells);
+  }
+
+  int index = 0;
+  VEC3F r(0.0, 0.0, 0.0);
+  VEC3F point(0.0, 0.0, 0.0);
+  VEC3F* velocityPointer = box->get_velocity();
+
+  for (int z = 1; z < _zRes - 1; z++) {
+    for (int y = 1; y < _yRes - 1; y++) {
+      for (int x = 1; x < _xRes - 1; x++) {
+        for (int i = 0; i < 3; i++, index++) {
+          point = this->cellCenter(x, y, z);
+          // if point is in the interior of the obstacle
+          if ( box->inside(point) ) {
+            // complement matrix, so put 1's instead of 0's
+            _neumannIOPcomplement(index, index) = 1.0;
+            // update the radial and linear velocities
+            box->update_r(point, &r);
+            box->update_linearVelocity(r);
+            if (i == 0) {
+              _neumannVector[index] = (*velocityPointer)[0];
+            }
+            else if (i == 1) {
+              _neumannVector[index] = (*velocityPointer)[1];
+            }
+            else {
+              _neumannVector[index] = (*velocityPointer)[2];
+            }
+          }
+        }
+      }
+    }
+  }        
+}
+
+//////////////////////////////////////////////////////////////////////
+// do a reduced IOP Neumann boundary for the box
+/////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_EIGEN::reducedSetMovingBox(BOX* box)
+{
+  TIMER functionTimer(__FUNCTION__);
+  
+  // update _neumannIOPcomplement and _neumannVector
+  setPeeledSparseMovingIOPComplement(box);
+
+  _reducedIOP = _projectionIOP_T_preprojectU - 
+                _neumannIOPcomplement.project(_projectionIOP, _preprojectU);
+
+  // project the homgeneous coordinate
+  VectorXd n_hat = _projectionIOP * _neumannVector; 
+
+  _qDot = _reducedIOP * _qDot + n_hat;
+}
+
 //////////////////////////////////////////////////////////////////////
 // diff the current sim results against ground truth
 //////////////////////////////////////////////////////////////////////
@@ -1725,12 +1618,9 @@ void SUBSPACE_FLUID_3D_EIGEN::buildOutOfCoreMatricesIOP()
 
   int totalCells = (_xRes - 2) * (_yRes - 2) * (_zRes - 2);
   SPARSE_MATRIX_ARRAY sparseA(totalCells, totalCells);
-  //////////////////////////////////////////////////
-  // QUESTION: do I need to account for obstacles here?
-  // ANSWER: No.
   buildFlatA(sparseA, _obstacles);
+
   // (builds Poisson)
-  //////////////////////////////////////////////////
   cout << " Projecting the pressure matrix ... " << flush;
   _reducedA = sparseA.projectVerySparse(_pressureU, _pressureU);
   sparseA.clear();
@@ -1837,28 +1727,21 @@ void SUBSPACE_FLUID_3D_EIGEN::buildOutOfCoreMatricesIOP()
   ptovTimer.stop();
   TIMER::printTimings();
   
-  TIMER iopTimer("IOP projection"); 
-  // build reduced IOP
-  SPARSE_MATRIX peeledIOP(totalCellsD, totalCellsD);
-  VEC3I center(_xRes/2, _yRes/2, _zRes/2);
-  double radius = 0.1;
-  buildSparseIOP(peeledIOP, center, radius);
-  // read in the projection matrix
+  TIMER iopTimer("IOP precomputation"); 
+  // read in the projection matrices
   filename = _reducedPath + string("U.iop.matrix");
   EIGEN::read(filename, _projectionIOP); 
-
   filename = _reducedPath + string("U.preproject.matrix");
   EIGEN::read(filename, _preprojectU);
+
   // projection into the subspace
-  cout << "peeledIOP.rows: " << peeledIOP.rows() << endl;
-  cout << "peeledIOP.cols: " << peeledIOP.cols() << endl;
   cout << "_projectionIOP.rows" << _projectionIOP.rows() << endl;
   cout << "_projectionIOP.cols" << _projectionIOP.cols() << endl;
   cout << "_preprojectU.rows" << _preprojectU.rows() << endl;
   cout << "_preprojectU.cols" << _preprojectU.cols() << endl;
-  _reducedIOP = peeledIOP.project(_projectionIOP, _preprojectU);
-  filename = _reducedPath + string("U.iop.subspace.matrix");
-  EIGEN::write(filename, _reducedIOP);
+  _projectionIOP_T_preprojectU = _projectionIOP.transpose() * _preprojectU; 
+  filename = _reducedPath + string("U'U.iop.subspace.matrix");
+  EIGEN::write(filename, _projectionIOP_T_preprojectU);
 
   // stomp IOP after writing it
   _projectionIOP.resize(0, 0);

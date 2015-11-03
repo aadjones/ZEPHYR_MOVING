@@ -52,7 +52,6 @@ public:
 
   void stepReorderedCubatureStam();
   void stepReorderedCubatureStamTest();
-  void stepObstacleReorderedCubatureStam();
   void stepObstacleSameOrder();
   void stepMovingObstacle(BOX* box);
 
@@ -155,6 +154,16 @@ protected:
   
   // matrix to project the full IOP matrix into the subspace
   MatrixXd _projectionIOP;
+
+  // precomputed _projectionIOP' * _preprojectU for moving obstacle
+  MatrixXd _projectionIOP_T_preprojectU;
+
+  // the complement matrix to the neumann IOP matrix, flipping 0's and 1's on the
+  // diagonal
+  SPARSE_MATRIX _neumannIOPcomplement;
+
+  // the homogeneous vector n that is appended as the last column of the IOP matrix
+  VectorXd _neumannVector;
 
   // reduced matrix version of stomping the interior of an obstacle for IOP
   MatrixXd _reducedIOP;
@@ -276,9 +285,16 @@ protected:
   // do a reduced zeroing out the interior of the sphere for IOP
   void reducedSetZeroSphere();
 
+  // do a reduced Neumann boundary for the box
+  void reducedSetMovingBox(BOX* box);
+
   // build a sparse matrix version of IOP
   void buildSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius);
   void buildPeeledSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius);
+
+  // update the Neumann moving boundary condition complement matrix
+  // and the Neumann homogeneous vector
+  void setPeeledSparseMovingIOPComplement(BOX* box);
 
   // do a full-rank advection of heat and density using semi-Lagrangian
   void advectHeatAndDensityStam();
