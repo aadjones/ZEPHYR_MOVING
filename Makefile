@@ -1,6 +1,6 @@
 SHELL := /bin/bash -e
 
-BINS = fluidIOP3D fluidMoving3D svdOutOfCoreMultiple
+BINS = fluidMoving3D svdOutOfCoreMultiple reducedMoving3D
 
 SRCS = geometry linearalgebra integrators util glvu cubature 
 

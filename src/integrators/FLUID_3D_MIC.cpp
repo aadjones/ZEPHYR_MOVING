@@ -337,9 +337,6 @@ void FLUID_3D_MIC::stepWithMovingObstacle(BOX* box)
   _density.setZeroBorder();
 
   // compute the forces
-  // ADJ: might want to remove buoyancy for the new sim
-  // addBuoyancy(_heat.data());
-  // addWind(_heat.data());
   _velocity.axpy(_dt, _force);
   _force.clear();
 
@@ -747,6 +744,15 @@ void FLUID_3D_MIC::addSmokeColumn()
 }
 
 //////////////////////////////////////////////////////////////////////
+// add a test portion of a sphere of density to the center
+//////////////////////////////////////////////////////////////////////
+void FLUID_3D_MIC::addSmokeSphere() 
+{
+	addSmokeSphereTestCase(_density.data(), _res);
+	addSmokeSphereTestCase(_heat.data(), _res);
+}
+
+//////////////////////////////////////////////////////////////////////
 // generic static version, so that it can be applied to the
 // WTURBULENCE grid as well
 //////////////////////////////////////////////////////////////////////
@@ -759,11 +765,8 @@ void FLUID_3D_MIC::addSmokeTestCase(Real* field, VEC3I res)
 	Real xTotal = dx * res[0];
 	Real zTotal = dx * res[2];
 
-  // Real heighMin = 0.05;
-  // Real heighMax = 0.10;
-  // ADJ: updated these heights
-  Real heighMin = 0.35;
-  Real heighMax = 0.425;
+  Real heighMin = 0.05;
+  Real heighMax = 0.10;
 
   for (int z = 0; z < res[2]; z++)
     for (int y = (int)(heighMin*res[1]); y <= (int)(heighMax * res[1]); y++)
@@ -779,6 +782,43 @@ void FLUID_3D_MIC::addSmokeTestCase(Real* field, VEC3I res)
           field[index] = 1.0f;
         }
       }
+}
+
+//////////////////////////////////////////////////////////////////////
+// setting the initial conditions for the spinning obstacle 
+//////////////////////////////////////////////////////////////////////
+void FLUID_3D_MIC::addSmokeSphereTestCase(Real* field, VEC3I res)
+{
+	const int slabSize = res[0]*res[1]; 
+
+  Real r = 0.2;
+  Real dr = 0.03;
+  VEC3F center(0.5, 0.5, 0.5);
+  Real heightMin1 = center[1] - r;
+  Real heightMax1 = heightMin1 + 0.1; 
+  Real heightMax2 = center[1] + r; 
+  Real heightMin2 = heightMax2 - 0.1;
+
+  VEC3F point(0.0, 0.0, 0.0);
+
+  for (int z = 0; z < res[2]; z++) {
+    for (int y = 0; y < res[1]; y++) {
+      for (int x = 0; x < res[0]; x++) {
+        if ( ( y >= heightMin1 * res[1] && y <= heightMax1 * res[1] ) ||
+             ( y >= heightMin2 * res[1] && y <= heightMax2 * res[1] ) ) {
+
+          point = this->cellCenter(x, y, z);
+          point -= center;
+          Real length = norm(point); 
+
+          if (length <= r && length >= r - dr) {
+            int index = x + y * res[0] + z * slabSize;
+            field[index] = 1.0f;
+          }
+        }
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////

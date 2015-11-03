@@ -17,7 +17,6 @@
  Copyright 2013 Theodore Kim
  */
 #include "EIGEN.h"
-
 #include <cmath>
 #include "QUICKTIME_MOVIE.h"
 
@@ -30,19 +29,13 @@
 #include <GL/freeglut.h>
 #include <GL/glu.h>
 #endif
-#include "FLUID_3D_MIC.h"
+#include "SUBSPACE_FLUID_3D_EIGEN.h"
 #include "MATRIX.h"
 #include "SIMPLE_PARSER.h"
 
 using namespace std;
 
 GLVU glvu;
-
-// Quicktime movie to capture to
-QUICKTIME_MOVIE movie;
-
-// currently capturing frames for a movie?
-bool captureMovie = true;
 
 // is the mouse pressed?
 bool mouseClicked = false;
@@ -53,8 +46,17 @@ float clickZ;
 // animate it this frame?
 bool animate = true;
 
+// currently capturing frames for a movie?
+bool captureMovie = true;
+
 // fluid being simulated
-FLUID_3D_MIC* fluid = NULL;
+SUBSPACE_FLUID_3D_EIGEN* fluid = NULL;
+
+// ground truth
+FLUID_3D_MIC* ground = NULL;
+
+// Quicktime movie to capture to
+QUICKTIME_MOVIE movie;
 
 // moving obstacle instantiation
 BOX* box = NULL;
@@ -74,6 +76,7 @@ int xRes = 0;
 int yRes = 0;
 int zRes = 0;
 
+void runOnce();
 void runEverytime();
 
 // helper function to write unique filenames
@@ -84,10 +87,10 @@ void writeToQuicktime();
 
 vector<VECTOR> snapshots;
 
-// user configuration initializations
-string snapshotPath("./data/snapshots.stam.no.vorticity/");
-string previewMovie("./data/stam.mov");
-int simulationSnapshots = 20;
+// user configuration
+string snapshotPath;
+string previewReducedMovie;
+int simulationSnapshots;
 
 ///////////////////////////////////////////////////////////////////////
 // draw coordinate axes
@@ -154,21 +157,29 @@ void glutDisplay()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
 
-    // draw the fluid density
     glPushMatrix();
       glTranslatef(0.5, 0.5, 0.5);
+      /////////////////////////////////////////////////////////////////
+      // take difference here
+      /* 
+      auto density = fluid->density();
+      auto ground_density = ground->density();
+      auto diff = density - ground_density;
+      diff.draw();
+      diff.drawBoundingBox();
+      */
       fluid->density().draw();
       fluid->density().drawBoundingBox();
+      /////////////////////////////////////////////////////////////////
     glPopMatrix();
-
-    // draw the obstacle
+   
+    // draw the obstacle 
     glPushMatrix();
       box->draw();
-    glPopMatrix();
-
-  
+    glPopMatrix();  
 
   glvu.EndFrame();
+  // if we're recording a movie, capture a frame
   if (captureMovie) {
     movie.addFrameGL();
   }
@@ -180,6 +191,7 @@ void glutDisplay()
 void glutIdle()
 {
   runEverytime();
+
   glutPostRedisplay();
 }
 
@@ -192,28 +204,28 @@ void glutKeyboard(unsigned char key, int x, int y)
     case 'a':
       animate = !animate;
       break;
+    case 'q':
+      exit(0);
+      break;
     case 'm':
-      // if we were already capturing a movie
-      if (captureMovie)
-      {
-        // write out the movie
-        movie.writeMovie("movie.mov");
+        // if we were already capturing a movie
+        if (captureMovie)
+        {
+         // write out the movie
+         movie.writeMovie("movieSubspace.mov");
 
         // reset the movie object
         movie = QUICKTIME_MOVIE();
 
-        // stop capturing frames
-        captureMovie = false;
-      }
-      else
-      {
-        cout << " Starting to capture movie. " << endl;
+       // stop capturing frames
+       captureMovie = false;
+        }
+        else
+        {
+         cout << " Starting to capture movie. " << endl;
         captureMovie = true;
-      }
-      break; 
-    case 'q':
-      exit(0);
-      break;
+        }
+       break; 
     default:
       break;
   }
@@ -286,9 +298,8 @@ int glvuWindow()
   glEnable (GL_BLEND);
   glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  // ADJ: modify the Eye vector to change the scene's perspective
   glvuVec3f ModelMin(-10,-10,-10), ModelMax(10,10,10), 
-        Eye(1.5,0.5,2), LookAtCntr(0.5,0.5,0.5),  Up(0,1,0);
+        Eye(0.5,0.5,2), LookAtCntr(0.5,0.5,0.5),  Up(0,1,0);
 
   float Yfov = 45;
   float Aspect = 1;
@@ -317,12 +328,12 @@ int main(int argc, char *argv[])
   }
   SIMPLE_PARSER parser(argv[1]);
 
-  int amplify = 4;
-  // QUESTION: what does amplify do?
-
   xRes = parser.getInt("xRes", 48);
   yRes = parser.getInt("yRes", 64);
   zRes = parser.getInt("zRes", 48);
+  string reducedPath = parser.getString("reduced path", "./data/reduced.dummy/");
+  snapshotPath = parser.getString("snapshot path", "./data/dummy/");
+  simulationSnapshots = parser.getInt("simulation snapshots", 20);
   Real vorticity = parser.getFloat("vorticity", 0);
 
   cout << " Using resoluion: " << xRes << " " << yRes << " " << zRes << endl;
@@ -346,16 +357,27 @@ int main(int argc, char *argv[])
       cout << "Dirichlet " << endl;
   }
 
-  snapshotPath = parser.getString("snapshot path", "./data/dummy/");
-  simulationSnapshots = parser.getInt("simulation snapshots", 20);
+  double discardThreshold = parser.getFloat("discard threshold", 1e-9);
+  cout << " Using discard threshold: " << discardThreshold << endl;
   
-	fluid = new FLUID_3D_MIC(xRes, yRes, zRes, amplify, &boundaries[0]);
-  fluid->vorticityEps() = vorticity;
-  fluid->snapshotPath() = snapshotPath;
+  bool usingIOP = parser.getBool("iop", 0);
+  cout << "usingIOP was parsed as: " << usingIOP << endl;
+	fluid = new SUBSPACE_FLUID_3D_EIGEN(xRes, yRes, zRes, reducedPath, &boundaries[0], usingIOP);
+  fluid->loadReducedRuntimeBases();
 
+  // for debugging
+  // fluid->loadReducedIOPAll();
+
+  fluid->fullRankPath() = snapshotPath;
+  fluid->vorticityEps() = vorticity;
+  
+  // ground = new FLUID_3D_MIC(xRes, yRes, zRes, 0);
+ 
   box = new BOX(boxCenter, boxLengths, period, translationPeriod);
   box->set_dt(fluid->dt());
   
+  TIMER::printTimings();
+ 
   glutInit(&argc, argv);
   glvuWindow();
 
@@ -364,55 +386,50 @@ int main(int argc, char *argv[])
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void runEverytime()
-{
-  static bool firstTime = true;
 
-  if (firstTime) {
-    string mkdir("mkdir ");
-    mkdir = mkdir + snapshotPath;
-    system(mkdir.c_str());
-
-    firstTime = false;
+void runOnce()
+  {
   }
 
-  if (animate) {
+void runEverytime()
+{
+  if (animate)
+  {
     static int step = 0;
+    cout << " Simulation step " << step << endl;
+    fluid->addSmokeColumn();
 
-    // step the sim
-    cout << " Simulation step " << step << " of " << simulationSnapshots << endl;
+    // the splitting is not permuted in this method
+    fluid->stepObstacleSameOrder();
     
-    if (step == 0) { fluid->addSmokeSphere(); }
-
-    fluid->stepWithMovingObstacle(box);
-
-    // move the box along a horizontal translation and spin it around a constant axis
-    // code is implemented in such a way that the translation such occur *first*
-    box->translate_center();
-    box->spin();
-
-    box->update_time();
-
-    // write to disk
-    /*
+    /* 
     char buffer[256];
-    sprintf(buffer, "%sfluid.%04i.fluid3d", snapshotPath.c_str(), step);
+    string path = snapshotPath;
+    sprintf(buffer, "%sfluid.%04i.fluid3d", path.c_str(), step);
     string filename(buffer);
-    fluid->writeGz(filename);
-    fluid->appendStreamsIOP();
+    ground->readGz(filename);
+    cout << " Loaded in ground. " << endl;
     */
-    
+
     // print timings periodically
-    if (step % 10 == 0) { TIMER::printTimings(); }
+    // if (step % 10 == 0)
+    // {
+      VECTOR::printVertical = false;
+      TIMER::printTimingsPerFrame(step);
+      cout << " velocityAbs = " << VECTOR(fluid->velocityErrorAbs()) << ";" << endl;
+      cout << " velocityRelative = " << VECTOR(fluid->velocityErrorRelative()) << ";" << endl;
+      cout << " densityAbs = " << VECTOR(fluid->densityErrorAbs()) << ";" << endl;
+      cout << " densityRelative = " << VECTOR(fluid->densityErrorRelative()) << ";" << endl;
+    // }
 
     // check if we're done
-    if (step == simulationSnapshots) {
+    if (step == simulationSnapshots) {    
       TIMER::printTimings();      
       // if we were already capturing a movie
       if (captureMovie) {
-        writeToQuicktime(); 
-        // stop capturing frames
-        captureMovie = false;
+       writeToQuicktime();
+       // stop capturing frames
+       captureMovie = false;
       }
       exit(0);
     }
@@ -421,12 +438,11 @@ void runEverytime()
   }
 }
 
-
 //////////////////////////////////////////////////////////////////////
 // Helper functions
 //////////////////////////////////////////////////////////////////////
-
 //////////////////////////////////////////////////////////////////////
+
 // check if a file exists
 //////////////////////////////////////////////////////////////////////
 bool fileExists(const string& filename)
@@ -449,12 +465,12 @@ void writeToQuicktime()
   // write out the movie
   int i = 0;
   char buffer[256];
-  sprintf(buffer, "movieObstacle%i.mov", i);
+  sprintf(buffer, "movieObstacleSubspace%i.mov", i);
   string movieString(buffer);
 
   while (fileExists(movieString)) {
     i++;
-    sprintf(buffer, "movieObstacle%i.mov", i);
+    sprintf(buffer, "movieObstacleSubspace%i.mov", i);
     movieString = string(buffer);
   }
   movie.writeMovie(movieString.c_str());

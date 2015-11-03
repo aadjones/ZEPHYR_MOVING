@@ -44,6 +44,9 @@ public:
   void addSmokeColumn();
   void addSmokeTestCase(Real* field, VEC3I res);
 
+  void addSmokeSphere();
+  void addSmokeSphereTestCase(Real* field, VEC3I res);
+
   void step();
   void stepWithObstacleSameOrder();
   void stepWithMovingObstacle(BOX* box);

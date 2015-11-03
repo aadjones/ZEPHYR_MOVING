@@ -54,6 +54,7 @@ public:
   void stepReorderedCubatureStamTest();
   void stepObstacleReorderedCubatureStam();
   void stepObstacleSameOrder();
+  void stepMovingObstacle(BOX* box);
 
   const MatrixXd& U() const { return _U; };
   const MatrixXd& preadvectU() const { return _preadvectU; };
