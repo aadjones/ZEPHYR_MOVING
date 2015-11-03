@@ -1,6 +1,6 @@
 SHELL := /bin/bash -e
 
-BINS = fluidMoving3D svdOutOfCoreMultiple reducedMoving3D
+BINS = fluidMoving3D svdOutOfCoreMultiple cubatureGeneratorStamStaged reducedMoving3D
 
 SRCS = geometry linearalgebra integrators util glvu cubature 
 
