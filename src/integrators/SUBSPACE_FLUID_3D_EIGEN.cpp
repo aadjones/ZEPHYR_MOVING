@@ -1985,9 +1985,10 @@ void SUBSPACE_FLUID_3D_EIGEN::computeVelocityToDivergence()
         // as a reminder.
         if (x != xPeeled - 1)
           _velocityToDivergence(index, 3 * right + 0) += coeff;
-        else if (_domainBcLeft != 0)
+        // ADJ: switching this from _domainBcRight, since it is the case when x == xPeeled - 1
+        else if (_domainBcRight != 0)
           _velocityToDivergence(index, 3 * index + 0) += -coeff;
-        else if (_domainBcLeft == 0)
+        else if (_domainBcRight == 0)
           _velocityToDivergence(index, 3 * left + 0) += coeff;
         else
         {
@@ -2011,6 +2012,9 @@ void SUBSPACE_FLUID_3D_EIGEN::computeVelocityToDivergence()
 
         if (y != yPeeled - 1)
           _velocityToDivergence(index, 3 * up + 1)   += coeff;
+        // ADJ: added the case if _domainBcTop != 0 so as not to fall through
+        else if (_domainBcTop != 0)
+          _velocityToDivergence(index, 3 * index + 1) += -coeff;
         else if (_domainBcTop == 0)
           _velocityToDivergence(index, 3 * down + 1) += coeff;
         else
@@ -2022,7 +2026,11 @@ void SUBSPACE_FLUID_3D_EIGEN::computeVelocityToDivergence()
 
         if (y != 0)
           _velocityToDivergence(index, 3 * down + 1) += -coeff;
-        else if (_domainBcTop == 0)
+        // ADJ: added the case if _domainBc != 0 here as well
+        // also switched from top to bottom, since this will be when y == 0
+        else if (_domainBcBottom != 0)
+          _velocityToDivergence(index, 3 * index + 1) += coeff;
+        else if (_domainBcBottom == 0)
           _velocityToDivergence(index, 3 * up + 1)   += -coeff;
         else
         {
@@ -2033,8 +2041,11 @@ void SUBSPACE_FLUID_3D_EIGEN::computeVelocityToDivergence()
         
         if (z != zPeeled - 1)
           _velocityToDivergence(index, 3 * far + 2)  += coeff;
-        else if (_domainBcFront != 0)
+        else if (_domainBcBack != 0)
           _velocityToDivergence(index, 3 * index + 2) += -coeff;
+        // ADJ: added the == case and switched from front to back
+        else if (_domainBcBack == 0)
+          _velocityToDivergence(index, 3 * near + 2) += coeff;
         else
         {
           cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
@@ -2046,6 +2057,9 @@ void SUBSPACE_FLUID_3D_EIGEN::computeVelocityToDivergence()
           _velocityToDivergence(index, 3 * near + 2) += -coeff;
         else if (_domainBcFront != 0)
           _velocityToDivergence(index, 3 * index + 2)  += coeff;
+        // ADJ: added the == case
+        else if (_domainBcFront == 0)
+          _velocityToDivergence(index, 3 * far + 2) += -coeff;
         else
         {
           cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
