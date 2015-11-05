@@ -47,8 +47,9 @@ public:
   void addSmokeSphere();
   void addSmokeSphereTestCase(Real* field, VEC3I res);
 
+  void setInitialVelocity(BOX* box);
+
   void step();
-  void stepWithObstacleSameOrder();
   void stepWithMovingObstacle(BOX* box);
 
   int xRes() const { return _xRes; };
