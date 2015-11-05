@@ -316,7 +316,7 @@ void BIG_MATRIX::outOfCoreSVD(const string& filenamePrefix, const string& reduce
 #endif
 
   // actually, give back PCA values
-  for (int x =0; x < S.size(); x++)
+  for (int x = 0; x < S.size(); x++)
     S[x] = S[x] * S[x];
 
   svdTimer.stop();
