@@ -380,9 +380,12 @@ void runEverytime()
     static int step = 0;
 
     // step the sim
-    cout << " Simulation step " << step << " of " << simulationSnapshots << endl;
+    cout << " Simulation step " << 1 + step << " of " << simulationSnapshots << endl;
     
-    if (step == 0) { fluid->addSmokeSphere(); }
+    if (step == 0) { 
+      fluid->addSmokeSphere(); 
+      fluid->setInitialVelocity(box);
+    }
 
     fluid->stepWithMovingObstacle(box);
 
@@ -404,7 +407,7 @@ void runEverytime()
     if (step % 10 == 0) { TIMER::printTimings(); }
 
     // check if we're done
-    if (step == simulationSnapshots) {
+    if (step == simulationSnapshots - 1) {
       TIMER::printTimings();      
       // if we were already capturing a movie
       if (captureMovie) {
