@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# run through the full subspace resimulation pipeline
+
+./bin/fluidMoving3D ./cfg/stam.64.moving.cfg | tee fluidMoving3D.txt
+./bin/svdOutOfCoreMultiple ./cfg/stam.64.moving.cfg | tee svd.txt
+./bin/cubatureGeneratorStamStaged ./cfg/stam.64.moving.cfg | tee cubature.txt
+./bin/reducedMoving3D ./cfg/stam.64.moving.cfg | reducedMoving3D.txt
+
