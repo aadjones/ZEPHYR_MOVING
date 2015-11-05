@@ -361,7 +361,7 @@ int main(int argc, char *argv[])
   cout << " Using discard threshold: " << discardThreshold << endl;
   
   bool usingIOP = parser.getBool("iop", 0);
-  cout << "usingIOP was parsed as: " << usingIOP << endl;
+  cout << " UsingIOP: " << usingIOP << endl;
 	fluid = new SUBSPACE_FLUID_3D_EIGEN(xRes, yRes, zRes, reducedPath, &boundaries[0], usingIOP);
   fluid->loadReducedRuntimeBases();
 
@@ -396,9 +396,12 @@ void runEverytime()
   if (animate)
   {
     static int step = 0;
-    cout << " Simulation step " << step << endl;
+    cout << " Simulation step " << 1 + step << endl;
 
-    if (step == 0) { fluid->addSmokeSphere(); }
+    if (step == 0) { 
+      fluid->addSmokeSphere(); 
+      fluid->setInitialVelocity(box);
+    }
 
     // the splitting is not permuted in this method
     fluid->stepMovingObstacle(box);
@@ -429,7 +432,7 @@ void runEverytime()
     // }
 
     // check if we're done
-    if (step == simulationSnapshots) {    
+    if (step == simulationSnapshots - 1) {    
       TIMER::printTimings();      
       // if we were already capturing a movie
       if (captureMovie) {
