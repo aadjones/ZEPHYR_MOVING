@@ -86,12 +86,6 @@ public:
   // load ALL the bases needed for cubature runtime debugging
   void loadReducedRuntimeBasesAll(string path = string(""));
 
-  // load, and if needed, precompute the matrices needed for IOP
-  void loadReducedIOP(string path = string(""));
-
-  // load ALL the IOP bases needed for debugging
-  void loadReducedIOPAll(string path = string(""));
-
   // read in a cubature scheme
   void readAdvectionCubature();
 
@@ -292,7 +286,7 @@ protected:
   void buildSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius);
   void buildPeeledSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius);
 
-  // update the Neumann moving boundary condition complement matrix
+  // update the Neumann moving boundary condition complement matrir
   // and the Neumann homogeneous vector
   void setPeeledSparseMovingIOPComplement(BOX* box);
 

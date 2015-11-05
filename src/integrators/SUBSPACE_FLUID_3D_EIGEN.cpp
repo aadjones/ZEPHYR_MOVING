@@ -58,7 +58,7 @@ SUBSPACE_FLUID_3D_EIGEN::SUBSPACE_FLUID_3D_EIGEN(int xRes, int yRes, int zRes, c
       initOutOfCoreIOP();
     }
     else {
-      cout << "Not using IOP in fluid constructor. \n";
+      cout << " Not using IOP in fluid constructor." << endl;
       initOutOfCore();
     }
 
@@ -102,6 +102,7 @@ void SUBSPACE_FLUID_3D_EIGEN::initOutOfCore()
                     fileExists(_reducedPath + string("projected.ptov.matrix")) &&
                     fileExists(_reducedPath + string("inverseProduct.matrix"));
 
+  cout << " filesBuilt: " << filesBuilt << endl;
   if (!filesBuilt)
     buildOutOfCoreMatrices();
   else
@@ -139,7 +140,7 @@ void SUBSPACE_FLUID_3D_EIGEN::initOutOfCore()
 }
 void SUBSPACE_FLUID_3D_EIGEN::initOutOfCoreIOP()
 {
-  cout << "Using initOutOfCoreIOP inside constructor!" << endl;
+  cout << " Using initOutOfCoreIOP inside fluid constructor. " << endl;
   // init the peeled dimensions
   _xPeeled = _xRes - 2;
   _yPeeled = _yRes - 2;
@@ -159,9 +160,11 @@ void SUBSPACE_FLUID_3D_EIGEN::initOutOfCoreIOP()
                     fileExists(_reducedPath + string("projected.vtod.matrix")) &&
                     fileExists(_reducedPath + string("damping.peeled.matrix")) &&
                     fileExists(_reducedPath + string("projected.ptov.matrix")) &&
-                    fileExists(_reducedPath + string("U.iop.subspace.matrix")) &&
+                    // ADJ: switching this name to U'U.iop.subspace.matrix
+                    fileExists(_reducedPath + string("U'U.iop.subspace.matrix")) &&
                     fileExists(_reducedPath + string("inverseProduct.matrix"));
-
+  
+  cout << " filesBuilt: " << filesBuilt << endl;
   if (!filesBuilt)
     buildOutOfCoreMatricesIOP();
   else
@@ -560,6 +563,8 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
   TIMER projectionTimer("Initial velocity projection");
   _qDot = _velocity.peeledProject(_preadvectU);
   projectionTimer.stop();
+  
+  puts("Finished velocity projection.");
 
   // grab the preadvected values of _velocity and _density
   VECTOR3_FIELD_3D preadvectVelocity = _velocity;
@@ -594,11 +599,15 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
 
   // advect just heat and density
   advectHeatAndDensityStam();
-  
+ 
+  puts("Finished full-space heat and density advection.");
+
   // subspace advection for velocity.
   // reads from _preadvectU
   reducedAdvectStagedStamFast();
   advectionTimer.stop();
+
+  puts("Finished reduced advection.");
   ////////////////////////////////////////////////////////////////////
 
   ////////////////////////////////////////////////////////////////////
@@ -623,6 +632,8 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
   reducedPeeledDiffusion();
   diffusionProjectionTimer.stop();
 
+  puts("Finished reduced diffusion.");
+
   ////////////////////////////////////////////////////////////////////
   // full space comparison of diffusion
   //_velocity.peeledUnproject(_preprojectU, _qDot);
@@ -644,8 +655,9 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
 
   // reduced IOP
   TIMER iopTiming("IOP timing");
-  // reducedSetZeroSphere();
   reducedSetMovingBox(box);
+
+  puts("Finished reducedSetMovingBox.");
 
   ////////////////////////////////////////////////////////////////////
   // obstacle stomping comparison
@@ -660,6 +672,9 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
   
   // reduced pressure project
   reducedStagedProject();
+
+  puts("Finished reduced pressure project.");
+
   //_velocity.peeledUnproject(_U, _qDot);
   //cout << "Pressure projection. \n";
   //diffTruth(velocityTrue, densityTrue);
@@ -670,6 +685,8 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
   TIMER unprojectionTimer("Velocity unprojection");
   _velocity.peeledUnproject(_U, _qDot);
   unprojectionTimer.stop();
+
+  puts("Finished subspace unprojection.");
 
   currentTime += _dt;
 
@@ -923,11 +940,22 @@ void SUBSPACE_FLUID_3D_EIGEN::reducedSetMovingBox(BOX* box)
   // update _neumannIOPcomplement and _neumannVector
   setPeeledSparseMovingIOPComplement(box);
 
+  cout << " left rows: " << _projectionIOP.rows() << endl;
+  cout << " right rows: " << _preprojectU.rows() << endl;
+  cout << " left cols: " << _projectionIOP.cols() << endl;
+  cout << " right cols: " << _preprojectU.cols() << endl;
+  
+  printf(" precomputed U'U dims: (%lu, %lu)\n",
+      _projectionIOP_T_preprojectU.rows(), _projectionIOP_T_preprojectU.cols());
+
   _reducedIOP = _projectionIOP_T_preprojectU - 
                 _neumannIOPcomplement.project(_projectionIOP, _preprojectU);
 
+  puts(" Computed the IOP projection inside reducedSetMovingBox.");
   // project the homgeneous coordinate
-  VectorXd n_hat = _projectionIOP * _neumannVector; 
+  cout << " _neumannVector size: " << _neumannVector.size() << endl;
+  VectorXd n_hat = _projectionIOP.transpose() * _neumannVector; 
+  puts(" Computed the homogeneous coordinate projection inside reducedSetMovingBox.");
 
   _qDot = _reducedIOP * _qDot + n_hat;
 }
@@ -1689,9 +1717,9 @@ void SUBSPACE_FLUID_3D_EIGEN::buildOutOfCoreMatricesIOP()
   int totalCellsD = 3 * (_xRes - 2) * (_yRes - 2) * (_zRes - 2);
   SPARSE_MATRIX_ARRAY sparseD(totalCellsD, totalCellsD);
   buildPeeledDampingMatrixFlat(sparseD);
-  cout << "sparseD.rows: " << sparseD.rows() << endl;
-  cout << "left -> _preprojectU.rows: " << _preprojectU.rows() << endl;
-  cout << "right -> _prediffuseU.rows: " << _prediffuseU.rows() << endl;
+  cout << " sparseD.rows: " << sparseD.rows() << endl;
+  cout << " left -> _preprojectU.rows: " << _preprojectU.rows() << endl;
+  cout << " right -> _prediffuseU.rows: " << _prediffuseU.rows() << endl;
   // QUESTION: is this correct for _dampingMatrixReduced?
   _dampingMatrixReduced = sparseD.projectVerySparse(_preprojectU, _prediffuseU);
   filename = _reducedPath + string("damping.peeled.matrix");
@@ -1744,6 +1772,7 @@ void SUBSPACE_FLUID_3D_EIGEN::buildOutOfCoreMatricesIOP()
   EIGEN::write(filename, _projectionIOP_T_preprojectU);
 
   // stomp IOP after writing it
+  // ADJ: we can't really stomp these in the moving obstacle case, can we?
   _projectionIOP.resize(0, 0);
   _preprojectU.resize(0, 0);
   purge();
@@ -1831,6 +1860,24 @@ void SUBSPACE_FLUID_3D_EIGEN::loadReducedRuntimeBases(string path)
   TIMER::printTimings();
   if (_U.rows() > 1000000)
     purge();
+
+  filename = path + string("U.iop.matrix");
+  EIGEN::read(filename, _projectionIOP);
+  
+  TIMER::printTimings();
+  if (_projectionIOP.rows() > 1000000)
+    purge();
+
+  filename = path + string("U.preproject.matrix");
+  EIGEN::read(filename, _preprojectU);
+  
+  TIMER::printTimings();
+  if (_preprojectU.rows() > 1000000)
+    purge();
+
+  // this one is in the subspace, so it is relatively small
+  filename = path + string("U'U.iop.subspace.matrix");
+  EIGEN::read(filename, _projectionIOP_T_preprojectU);
 }
 //////////////////////////////////////////////////////////////////////
 // load ALL the bases needed for cubature runtime debugging
@@ -1872,85 +1919,7 @@ void SUBSPACE_FLUID_3D_EIGEN::loadReducedRuntimeBasesAll(string path)
   
   TIMER::printTimings();
 }
-//////////////////////////////////////////////////////////////////////
-// load the IOP bases needed for cubature runtime
-//
-// the path variable is there in case we want to load off the SSD
-//////////////////////////////////////////////////////////////////////
-void SUBSPACE_FLUID_3D_EIGEN::loadReducedIOP(string path)
-{
-  TIMER functionTimer(__FUNCTION__);
-  if (path.length() == 0)
-    path = _reducedPath;
 
-  string filename;
-  
-  filename = path + string("U.preproject.matrix");
-  EIGEN::read(filename, _preprojectU);
- 
-  if (_preprojectU.rows() > 1000000) 
-    purge();
- 
-  ///////////////////////////////////////////////////////////////////// 
-  // QUESTION: This is probably wrong but I don't see how to avoid it! 
-  ///////////////////////////////////////////////////////////////////// 
-  filename = path + string("U.preadvect.matrix");
-  EIGEN::read(filename, _preadvectU);
-  if (_preadvectU.rows() > 1000000)
-    purge();
-  ///////////////////////////////////////////////////////////////////// 
-  ///////////////////////////////////////////////////////////////////// 
-  
-  filename = path + string("U.final.matrix");
-  EIGEN::read(filename, _U);
-  if (_U.rows() > 1000000)
-    purge();
-
-  TIMER::printTimings();
-}
-//////////////////////////////////////////////////////////////////////
-// load the IOP bases needed for cubature runtime
-//
-// the path variable is there in case we want to load off the SSD
-//////////////////////////////////////////////////////////////////////
-void SUBSPACE_FLUID_3D_EIGEN::loadReducedIOPAll(string path)
-{
-  //TIMER functionTimer(__FUNCTION__);
-  if (path.length() == 0)
-    path = _reducedPath;
-
-  string filename;
-  
-  filename = path + string("U.preproject.matrix");
-  EIGEN::read(filename, _preprojectU);
- 
-  if (_preprojectU.rows() > 1000000) 
-    purge();
- 
-  filename = path + string("U.preadvect.matrix");
-  cout << "reading _preadvectU. " << endl;
-  EIGEN::read(filename, _preadvectU);
-  cout << "dimensions: " << '(' << _preadvectU.rows() << ", " << _preadvectU.cols() << ')' << endl;
-  if (_preadvectU.rows() > 1000000) 
-    purge();
- 
-  filename = path + string("U.prediffuse.matrix");
-  EIGEN::read(filename, _prediffuseU); 
-  if (_prediffuseU.rows() > 1000000) 
-    purge();
-
-  filename = _reducedPath + string("U.iop.matrix");
-  EIGEN::read(filename, _iopU);
-  if (_iopU.rows() > 1000000) 
-    purge();
-
-  filename = path + string("U.final.matrix");
-  EIGEN::read(filename, _U);
-  if (_U.rows() > 1000000) 
-    purge();
-  
-  TIMER::printTimings();
-}
 //////////////////////////////////////////////////////////////////////
 // compute the velocity-to-divergence matrix
 //////////////////////////////////////////////////////////////////////
