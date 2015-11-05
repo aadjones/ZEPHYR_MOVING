@@ -225,94 +225,6 @@ void FLUID_3D_MIC::step()
 //////////////////////////////////////////////////////////////////////
 // step simulation once with fanciness like vorticity confinement 
 // and diffusion removed
-// Has a static spherical obstacle.
-// Is *NOT* reordered!
-// We do:
-// 1) forces
-// 2) advection
-// 3) diffusion
-// 4) boundary + pressure project (IOP)
-//////////////////////////////////////////////////////////////////////
-void FLUID_3D_MIC::stepWithObstacleSameOrder()
-{
-  Real goalTime = 0.1;
-  Real currentTime = 0;
-
-  // variables for the IOP obstacle
-  VEC3I center(_xRes/2, _yRes/2, _zRes/2);
-  double radius = 0.1;
-
-  // compute the CFL condition
-  _dt = goalTime;
-
-  // wipe forces
-  _force.clear();
-
-  // wipe boundaries
-  _velocity.setZeroBorder();
-  _density.setZeroBorder();
-
-  // compute the forces
-  addBuoyancy(_heat.data());
-  _velocity.axpy(_dt, _force);
-  _force.clear();
-
-  _prevorticity = _velocity;
-
-  addVorticity();
-  _velocity.axpy(_dt, _force);
-
-  // advect everything
-  advectStam();
-
-  // cache prediffusion
-  _prediffusion = _velocity;
-
-  // if the matrix isn't built yet, build it
-  if (_peeledDampingFull.rows() <= 0) {
-    buildPeeledDampingMatrixFull();
-  }
-
-  VectorXd after = _peeledDampingFull * _velocity.peelBoundary().flattenedEigen();
-  _velocity.setWithPeeled(after);
-
-  // cache preprojection before doing IOP
-  _preprojection = _velocity;
-
-  // let's test IOP with the full matrix
-
-  // if the matrix isn't built yet, build it
-  if (_peeledIOP.cols() <= 0) {
-    buildPeeledSparseIOP(_peeledIOP, center, radius);
-  }
-
-  //////////////////////////////////////////////////////////////////////
-  cout << "_peeledIOP dims: " << "(" << _peeledIOP.rows() << ", " << _peeledIOP.cols() << ")" << endl;
-  VectorXd afterIOP = _peeledIOP * _velocity.peelBoundary().flattenedEigen();
-  cout << "Did sparse matrix-vector multiply for IOP!" << endl;
-  _velocity.setWithPeeled(afterIOP);
-  //////////////////////////////////////////////////////////////////////
-  
-  // store the postIOP velocity (QUESTION: before or after the project?)
-  _postIOP = _velocity;
-
-  // project via Poisson
-  project();
-
-  // we don't really need to cache this since it is the final one, but it doesn't hurt 
-  _postIOPAndPressure = _velocity;
-
-  // this corresponds to doing only 1 iteration of IOP, but that may be sufficient
-  // for practical use
-
-  currentTime += _dt;
-
-	_totalTime += goalTime;
-	_totalSteps++;
-}
-//////////////////////////////////////////////////////////////////////
-// step simulation once with fanciness like vorticity confinement 
-// and diffusion removed
 // Has a moving fan obstacle
 // Is *NOT* reordered!
 // We do:
@@ -345,7 +257,7 @@ void FLUID_3D_MIC::stepWithMovingObstacle(BOX* box)
   addVorticity();
   _velocity.axpy(_dt, _force);
 
-  // advect everything
+  // advect everything (this caches preadvection)
   advectStam();
 
   // cache prediffusion
@@ -375,12 +287,15 @@ void FLUID_3D_MIC::stepWithMovingObstacle(BOX* box)
   // project via Poisson
   project();
 
+  // ADJ: commenting out the repetition of IOP for the time being.
+  /*
   // repeat to do the iteration!
   setVelocityNeumann();
   afterIOP = _neumannIOP * _velocityNeumann;
   _velocity.setWithPeeled(afterIOP);
 
   project();
+  */
 
   // we don't really need to cache this since it is the final one, but it doesn't hurt 
   _postIOPAndPressure = _velocity;
@@ -819,6 +734,33 @@ void FLUID_3D_MIC::addSmokeSphereTestCase(Real* field, VEC3I res)
       }
     }
   }
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// set the fluid initial velocity at the obstacle
+//////////////////////////////////////////////////////////////////////
+
+void FLUID_3D_MIC::setInitialVelocity(BOX* box)
+{
+  TIMER functionTimer(__FUNCTION__);
+
+  VEC3F r(0.0, 0.0, 0.0);
+  VEC3F point(0.0, 0.0, 0.0);
+  VEC3F* velocityPointer = box->get_velocity();
+
+  for (int z = 1; z < _zRes - 1; z++) {
+    for (int y = 1; y < _yRes - 1; y++) {
+      for (int x = 1; x < _xRes - 1; x++) {
+        point = this->cellCenter(x, y, z);
+        if ( box->inside(point) ) {
+          box->update_r(point, &r);
+          box->update_linearVelocity(r);
+          _velocity(x, y, z) = (*velocityPointer);
+        }
+      }
+    }
+  }        
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1451,8 +1393,7 @@ void FLUID_3D_MIC::appendStreams() const
   int scalarCols = cols / 3;
 
   // set the rows and cols, in case this is the first time
-  // QUESTION: why 5 instead of 6
-  // (having no understanding) ANSWER: if it's 6, SVD will BOMB!! 
+  // first 5 are vector fields, but the last one is a scalar field
   for (int x = 0; x < 5; x++)
     if (finalCols[x] == 0)
       finalCols[x] = cols;
@@ -1613,27 +1554,40 @@ void FLUID_3D_MIC::appendStreamsIOP() const
   {
     fwrite((void*)(velocity.data()), sizeof(double), cols, fileFinal);
     finalRows[0]++;
+    cout << " final rows is now: " << finalRows[0] << endl;
   }
 
   velocity = _preprojection.peelBoundary().flattened();
-  if (velocity.norm2() > 1e-7)
+  cout << " preprojection norm2: " << velocity.norm2() << endl;
+  
+  // ADJ: the condition that the norm is greater than 1e-7 was skipping the first step in
+  // preprojection, prediffusion, and preadvection, so it was removed.
+  // QUESTION: This seems to break the SVD call, though.
+  // Not sure why a row of zeros makes it not converge.
+
+  // if (velocity.norm2() > 1e-7)
   {
     fwrite((void*)(velocity.data()), sizeof(double), cols, filePreproject);
     finalRows[1]++;
+    cout << " preproject rows is now: " << finalRows[1] << endl;
   }
   
   velocity = _prediffusion.peelBoundary().flattened();
-  if (velocity.norm2() > 1e-7)
+  cout << " prediffusion norm2: " << velocity.norm2() << endl;
+  // if (velocity.norm2() > 1e-7)
   {
     fwrite((void*)(velocity.data()), sizeof(double), cols, filePrediffuse);
     finalRows[2]++;
+    cout << " prediffuse rows is now: " << finalRows[2] << endl;
   }
   
   velocity = _preadvection.peelBoundary().flattened();
-  if (velocity.norm2() > 1e-7)
+  cout << " preadvection norm2: " << velocity.norm2() << endl;
+  // if (velocity.norm2() > 1e-7)
   {
     fwrite((void*)(velocity.data()), sizeof(double), cols, filePreadvect);
     finalRows[3]++;
+    cout << " preadvect rows is now: " << finalRows[3] << endl;
   }
  
   if (usingIOP)
@@ -1643,6 +1597,7 @@ void FLUID_3D_MIC::appendStreamsIOP() const
     {
       fwrite((void*)(velocity.data()), sizeof(double), cols, fileIOP);
       finalRows[4]++;
+      cout << " IOP rows is now: " << finalRows[4] << endl;
     }
   }
 
@@ -1658,6 +1613,7 @@ void FLUID_3D_MIC::appendStreamsIOP() const
   {
     fwrite((void*)(scalar.data()), sizeof(double), scalarCols, filePressure);
     finalRows[5]++;
+    cout << " pressure rows is now: " << finalRows[5] << endl;
   }
 
   if (usingIOP)
@@ -1687,6 +1643,7 @@ void FLUID_3D_MIC::appendStreamsIOP() const
 
 // set the neumannIOP obstacle matrix
 void FLUID_3D_MIC::setPeeledSparseMovingIOP(BOX* box) 
+
 {
   TIMER functionTimer(__FUNCTION__);
   // if it's the first time this function is called, resize _neumannIOP.
