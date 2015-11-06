@@ -60,7 +60,7 @@ void BOX::update_rotationMatrix()
   _rotation = MATRIX3::rotation(_rotationAxis, -1 * _theta);
 }
 
-bool BOX::inside(const VEC3F& point) 
+bool BOX::inside(const VEC3F& point) const
 {
   // translate so that the center of rotation is the origin
   VEC3F pointTransformed = point - _center;

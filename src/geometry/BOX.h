@@ -55,7 +55,7 @@ public:
 
 
   // is the passed in point inside the box?
-  bool inside(const VEC3F& point);
+  bool inside(const VEC3F& point) const;
 
   // compute the radial vector from a point to the line determined
   // by the axis of rotation of the box
