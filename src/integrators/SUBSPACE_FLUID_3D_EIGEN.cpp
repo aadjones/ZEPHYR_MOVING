@@ -580,9 +580,9 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
   ////////////////////////////////////////////////////////////////////
   // full advection---modifies _velocity and _density and _heat
 
-  //advectStam();
-  //velocityTrue = _velocity;
-  //densityTrue = _density;
+  advectStam();
+  velocityTrue = _velocity;
+  densityTrue = _density;
   ////////////////////////////////////////////////////////////////////
 
   ////////////////////////////////////////////////////////////////////
@@ -612,19 +612,19 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
 
   ////////////////////////////////////////////////////////////////////
   // comparing the reduced advection to full advection
-  //_velocity.peeledUnproject(_prediffuseU, _qDot);
-  //cout << "Advection projection. \n";
-  //diffTruth(velocityTrue, densityTrue);
+  _velocity.peeledUnproject(_prediffuseU, _qDot);
+  cout << "Advection projection. \n";
+  diffTruth(velocityTrue, densityTrue);
   ///////////////////////////////////////////////////////////////////
   
   ////////////////////////////////////////////////////////////////////
   // Full-space diffusion
-  //if (_peeledDampingFull.rows() <= 0) {
-  //  buildPeeledDampingMatrixFull();
-  //}
-  //VectorXd after = _peeledDampingFull * _velocity.peelBoundary().flattenedEigen();
-  //_velocity.setWithPeeled(after);
-  //velocityTrue = _velocity;
+  if (_peeledDampingFull.rows() <= 0) {
+    buildPeeledDampingMatrixFull();
+  }
+  VectorXd after = _peeledDampingFull * _velocity.peelBoundary().flattenedEigen();
+  _velocity.setWithPeeled(after);
+  velocityTrue = _velocity;
   ////////////////////////////////////////////////////////////////////
   
   // subspace diffusion 
@@ -636,22 +636,22 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
 
   ////////////////////////////////////////////////////////////////////
   // full space comparison of diffusion
-  //_velocity.peeledUnproject(_preprojectU, _qDot);
-  //cout << "Diffusion projection.\n";
-  //diffTruth(velocityTrue, densityTrue);
+  _velocity.peeledUnproject(_preprojectU, _qDot);
+  cout << "Diffusion projection.\n";
+  diffTruth(velocityTrue, densityTrue);
   ////////////////////////////////////////////////////////////////////
  
   ////////////////////////////////////////////////////////////////////
   // full space boundary stomping
 
-  // if it's not build, construct the full IOP matrix (for debugging)
-  /*
-  if (_peeledIOP.cols() <= 0) {
-    buildPeeledSparseIOP(_peeledIOP, center, radius);
-  }
-  VectorXd afterIOP = _peeledIOP * velocityTrue.peelBoundary().flattenedEigen();
+  // update the full IOP matrix (for debugging)
+  
+  setPeeledSparseMovingIOP(box);
+
+  VectorXd homogeneous;
+  makeHomogeneousVelocity(velocityTrue, &homogeneous);
+  VectorXd afterIOP = _neumannIOP * homogeneous; 
   velocityTrue.setWithPeeled(afterIOP); 
-  */
 
   // reduced IOP
   TIMER iopTiming("IOP timing");
@@ -661,23 +661,24 @@ void SUBSPACE_FLUID_3D_EIGEN::stepMovingObstacle(BOX* box)
 
   ////////////////////////////////////////////////////////////////////
   // obstacle stomping comparison
-  //_velocity.peeledUnproject(_iopU, _qDot);
-  //cout << "Stomping boundaries test. \n";
-  //diffTruth(velocityTrue, densityTrue);
+
+  _velocity.peeledUnproject(_projectionIOP, _qDot);
+  cout << "Stomping boundaries test. \n";
+  diffTruth(velocityTrue, densityTrue);
 
   ////////////////////////////////////////////////////////////////////
   // this will modify _velocity using a full space projection
-  //project();
-  //velocityTrue = _velocity;
+  project();
+  velocityTrue = _velocity;
   
   // reduced pressure project
   reducedStagedProject();
 
   puts("Finished reduced pressure project.");
 
-  //_velocity.peeledUnproject(_U, _qDot);
-  //cout << "Pressure projection. \n";
-  //diffTruth(velocityTrue, densityTrue);
+  _velocity.peeledUnproject(_U, _qDot);
+  cout << "Pressure projection. \n";
+  diffTruth(velocityTrue, densityTrue);
   iopTiming.stop();
   ////////////////////////////////////////////////////////////////////
   
@@ -928,6 +929,21 @@ void SUBSPACE_FLUID_3D_EIGEN::setPeeledSparseMovingIOPComplement(BOX* box)
       }
     }
   }        
+}
+
+//////////////////////////////////////////////////////////////////////
+// copy from the passed in velocity to another and 
+// add a homogeneous coordinate 
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_EIGEN::makeHomogeneousVelocity(const VECTOR3_FIELD_3D& velocity, VectorXd* homogeneous)
+{
+  TIMER functionTimer(__FUNCTION__);
+  int peeledDims = 3 * (_xRes - 2) * (_yRes - 2) * (_zRes - 2);
+  assert(velocity.peelBoundary().flattenedEigen().size() == peeledDims);
+
+  homogeneous->resize(1 + peeledDims);
+  homogeneous->head(peeledDims) = velocity.peelBoundary().flattenedEigen();
+  (*homogeneous)[peeledDims] = 1.0;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1916,7 +1932,18 @@ void SUBSPACE_FLUID_3D_EIGEN::loadReducedRuntimeBasesAll(string path)
   EIGEN::read(filename, _U);
   if (_U.rows() > 1000000)
     purge();
+ 
+  filename = path + string("U.iop.matrix");
+  EIGEN::read(filename, _projectionIOP);
   
+  TIMER::printTimings();
+  if (_projectionIOP.rows() > 1000000)
+    purge(); 
+
+  // this one is in the subspace, so it is relatively small
+  filename = path + string("U'U.iop.subspace.matrix");
+  EIGEN::read(filename, _projectionIOP_T_preprojectU);
+
   TIMER::printTimings();
 }
 
