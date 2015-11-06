@@ -52,7 +52,6 @@ public:
 
   void stepReorderedCubatureStam();
   void stepReorderedCubatureStamTest();
-  void stepObstacleSameOrder();
   void stepMovingObstacle(BOX* box);
 
   const MatrixXd& U() const { return _U; };
@@ -240,8 +239,10 @@ protected:
   // projected Neumann IOP matrices
   vector<MatrixXd> _projectedNeumann;
 
+  /*
   // get the cell center
   VEC3F cellCenter(int x, int y, int z);
+  */
 
   // perform reduced order diffusion with separate boundary slabs
   void reducedPeeledDiffusion();
@@ -270,28 +271,13 @@ protected:
   // do a staged reduced order pressure projection
   void reducedStagedProject();
  
-  // do a staged reduced order pressure projection for use with IOP 
-  void reducedStagedProjectIOP();
-
-  // do a reduced order pressure projection for use with the unpermuted IOP
-  void reducedSameOrderProjectionIOP(); 
-
-  // do a reduced zeroing out the interior of the sphere for IOP
-  void reducedSetZeroSphere();
-
   // do a reduced Neumann boundary for the box
   void reducedSetMovingBox(BOX* box);
-
-  // build a sparse matrix version of IOP
-  void buildSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius);
-  void buildPeeledSparseIOP(SPARSE_MATRIX& A, const VEC3I& center, double radius);
+  void reducedSetMovingBoxDebug(BOX* box);
 
   // update the Neumann moving boundary condition complement matrir
   // and the Neumann homogeneous vector
   void setPeeledSparseMovingIOPComplement(BOX* box);
-
-  // copy from the passed in velocity to a vector with an extra homogeneous coordinate
-  void makeHomogeneousVelocity(const VECTOR3_FIELD_3D& velocity, VectorXd* homogeneous);
 
   // do a full-rank advection of heat and density using semi-Lagrangian
   void advectHeatAndDensityStam();
@@ -314,6 +300,9 @@ protected:
   
   // add a new orthogonalized column to the basis
   void addNewColumn(const VectorXd& newColumn, MatrixXd& U);
+  
+  // copying from the FLUID_3D cellCenter, just to be sure!
+  VEC3F cellCenter(int x, int y, int z);
 };
 
 #endif
