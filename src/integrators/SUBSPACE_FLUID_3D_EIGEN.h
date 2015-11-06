@@ -290,6 +290,9 @@ protected:
   // and the Neumann homogeneous vector
   void setPeeledSparseMovingIOPComplement(BOX* box);
 
+  // copy from the passed in velocity to a vector with an extra homogeneous coordinate
+  void makeHomogeneousVelocity(const VECTOR3_FIELD_3D& velocity, VectorXd* homogeneous);
+
   // do a full-rank advection of heat and density using semi-Lagrangian
   void advectHeatAndDensityStam();
   
