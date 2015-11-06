@@ -363,10 +363,10 @@ int main(int argc, char *argv[])
   bool usingIOP = parser.getBool("iop", 0);
   cout << " UsingIOP: " << usingIOP << endl;
 	fluid = new SUBSPACE_FLUID_3D_EIGEN(xRes, yRes, zRes, reducedPath, &boundaries[0], usingIOP);
-  fluid->loadReducedRuntimeBases();
 
+  // fluid->loadReducedRuntimeBases();
   // for debugging
-  // fluid->loadReducedIOPAll();
+  fluid->loadReducedRuntimeBasesAll();
 
   fluid->fullRankPath() = snapshotPath;
   fluid->vorticityEps() = vorticity;
