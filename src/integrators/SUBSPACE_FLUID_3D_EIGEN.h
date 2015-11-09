@@ -64,6 +64,11 @@ public:
   vector<Real>& velocityErrorRelative() { return _velocityErrorRelative; };
   vector<Real>& densityErrorRelative() { return _densityErrorRelative; };
 
+  int totalReducedSteps() const { return _totalReducedSteps; };
+
+  void setObstacle(const BOX& box) { _box = box; };
+  void setTotalReducedSteps(int totalReducedSteps) { _totalReducedSteps = totalReducedSteps; };
+
   // get the sub-basis of a cell from a specific basis  
   MatrixXd cellBasisPeeled(const MatrixXd& U, const int index);
 
@@ -94,7 +99,14 @@ public:
   // same as above but for IOP
   void buildOutOfCoreMatricesIOP();
 
+  // build and write out per-frame obstacle matrices
+  void buildObstacleMatrices();
+
 protected: 
+
+  BOX _box;
+  int _totalReducedSteps;
+
   MatrixXd _U;
 
   // boundary bases -- ordering is:
@@ -157,6 +169,9 @@ protected:
 
   // the homogeneous vector n that is appended as the last column of the IOP matrix
   VectorXd _neumannVector;
+
+  // the reduced space version of _neumannVector
+  VectorXd _reducedNeumannVector;
 
   // reduced matrix version of stomping the interior of an obstacle for IOP
   MatrixXd _reducedIOP;
@@ -238,11 +253,6 @@ protected:
 
   // projected Neumann IOP matrices
   vector<MatrixXd> _projectedNeumann;
-
-  /*
-  // get the cell center
-  VEC3F cellCenter(int x, int y, int z);
-  */
 
   // perform reduced order diffusion with separate boundary slabs
   void reducedPeeledDiffusion();
