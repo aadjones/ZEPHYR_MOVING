@@ -36,10 +36,14 @@ public:
   static bool readBig(const string& filename, MatrixXd& input);
   static void read(FILE* file, MatrixXd& input);
   static void readRaw(FILE* file, const int size, VectorXd& input);
+  static void read(const char* filename, VectorXd& inpute);
 
   static bool write(const string& filename, const MatrixXd& input);
   static void write(FILE* file, const MatrixXd& input);
   static void write(FILE* file, const VectorXd& input);
+  
+  static void write(const char* filename, const MatrixXd& input);
+  static void write(const char* filename, const VectorXd& input);
 
   static MatrixXd buildFromColumns(const vector<VectorXd>& columns);
   static MatrixXd getRows(const int rowBegin, const int totalRows, const MatrixXd& input);
