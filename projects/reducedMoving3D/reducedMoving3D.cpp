@@ -364,18 +364,23 @@ int main(int argc, char *argv[])
   bool usingIOP = parser.getBool("iop", 0);
   cout << " UsingIOP: " << usingIOP << endl;
 	fluid = new SUBSPACE_FLUID_3D_EIGEN(xRes, yRes, zRes, reducedPath, &boundaries[0], usingIOP);
+  fluid->setTotalReducedSteps(simulationSnapshots);
+  
+  box = new BOX(boxCenter, boxLengths, period, translationPeriod);
+  box->set_dt(fluid->dt());
+  // link the fluid with the obstacle
+  fluid->setObstacle(*box);
 
-  // fluid->loadReducedRuntimeBases();
+  fluid->buildObstacleMatrices();
+  
+  fluid->loadReducedRuntimeBases();
   // for debugging
-  fluid->loadReducedRuntimeBasesAll();
+  // fluid->loadReducedRuntimeBasesAll();
 
   fluid->fullRankPath() = snapshotPath;
   fluid->vorticityEps() = vorticity;
   
   // ground = new FLUID_3D_MIC(xRes, yRes, zRes, 0);
- 
-  box = new BOX(boxCenter, boxLengths, period, translationPeriod);
-  box->set_dt(fluid->dt());
   
   TIMER::printTimings();
  
@@ -390,6 +395,7 @@ int main(int argc, char *argv[])
 
 void runOnce()
   {
+    // precache something here if needed
   }
 
 void runEverytime()
