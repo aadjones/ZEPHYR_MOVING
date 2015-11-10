@@ -23,7 +23,7 @@
 #include "SUBSPACE_FLUID_3D_COMPRESSED_EIGEN.h"
 #include "BIG_MATRIX.h"
 #include "MATRIX_COMPRESSION_DATA.h"
-#include "COMPRESSION_REWRITE.h"
+#include "COMPRESSION.h"
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction

@@ -30,7 +30,6 @@
 #include "FLUID_3D_MIC.h"
 #include "SPARSE_MATRIX_ARRAY.h"
 #include "COMPRESSION_DATA.h"
-#include "DECOMPRESSION_DATA.h"
 #include "MATRIX_COMPRESSION_DATA.h"
 #include "COMPRESSION.h"
 

@@ -107,6 +107,12 @@ public:
   // out of place component-wise absolute value
   VECTOR abs() const;
 
+  // get the minimum entry
+  Real min() const;
+
+  // get the maximum entry
+  Real max() const;
+
   static bool printVertical;
 
 private:
