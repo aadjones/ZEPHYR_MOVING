@@ -178,6 +178,33 @@ void EIGEN::read(FILE* file, MatrixXd& input)
 }
 
 //////////////////////////////////////////////////////////////////////
+// read vector from passed in c-string filename
+//////////////////////////////////////////////////////////////////////
+void EIGEN::read(const char* filename, VectorXd& input)
+{
+  FILE* file;
+  file = fopen(filename, "rb");
+  if (file == NULL) 
+  {
+    cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+    cout << " VECTOR read failed! " << endl;
+    cout << " Could not open file " << filename << endl;
+    exit(EXIT_FAILURE);
+  }
+  // read dimension
+  int size;
+  fread((void*)&size, sizeof(int), 1, file);
+  input.resize(size);
+  
+  double dummy;
+  for (int x = 0; x < size; x++) {
+    fread((void*)&dummy, sizeof(double), 1, file);
+    input[x] = dummy;
+  }
+  fclose(file);
+}
+
+//////////////////////////////////////////////////////////////////////
 // write the matrix to a file
 //////////////////////////////////////////////////////////////////////
 bool EIGEN::write(const string& filename, const MatrixXd& input)
@@ -262,6 +289,66 @@ void EIGEN::write(FILE* file, const VectorXd& input)
     double dummy = input[x];
     fwrite((void*)&dummy, sizeof(double), 1, file);
   }
+}
+
+//////////////////////////////////////////////////////////////////////
+// write matrix to a file using passed in C string
+//////////////////////////////////////////////////////////////////////
+void EIGEN::write(const char* filename, const MatrixXd& input)
+{
+  TIMER functionTimer(__FUNCTION__);
+  FILE* file;
+  file = fopen(filename, "wb");
+  if (file == NULL)
+  {
+    cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+    cout << " MATRIX write failed! " << endl;
+    cout << " Could not open file " << filename << endl; 
+    exit(EXIT_FAILURE); 
+  }
+  cout << " Writing file: " << filename << " ... "; flush(cout);
+  // write dimensions
+  int rows = input.rows();
+  int cols = input.cols();
+  fwrite((void*)&rows, sizeof(int), 1, file);
+  fwrite((void*)&cols, sizeof(int), 1, file);
+
+  // just do the dumb but memory stingy way
+  for (int x = 0; x < rows; x++) {
+    for (int y = 0; y < cols; y++) {
+      double dummy = input(x,y);
+      fwrite((void*)&dummy, sizeof(double), 1, file);
+    }
+  }
+  fclose(file);
+}
+
+//////////////////////////////////////////////////////////////////////
+// write vector to a file using passed in C string
+//////////////////////////////////////////////////////////////////////
+void EIGEN::write(const char* filename, const VectorXd& input)
+{
+  TIMER functionTimer(__FUNCTION__);
+  FILE* file;
+  file = fopen(filename, "wb");
+  if (file == NULL)
+  {
+    cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+    cout << " VECTOR write failed! " << endl;
+    cout << " Could not open file " << filename << endl; 
+    exit(EXIT_FAILURE); 
+  }
+  cout << " Writing file: " << filename << " ... "; flush(cout);
+  // write dimensions
+  int size = input.size();
+  fwrite((void*)&size, sizeof(int), 1, file);
+
+  // just do the dumb but memory stingy way
+  for (int x = 0; x < size; x++) {
+    double dummy = input[x];
+    fwrite((void*)&dummy, sizeof(double), 1, file);
+  }
+  fclose(file);
 }
 
 //////////////////////////////////////////////////////////////////////
