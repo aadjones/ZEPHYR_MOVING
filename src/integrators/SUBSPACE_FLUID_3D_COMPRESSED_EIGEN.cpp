@@ -353,8 +353,6 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::stepWithObstacle()
   cout << "finished advect heat and density!" << endl;
 
   // reduced advect velocity
-  //reducedAdvectStagedStamFast();
-  //cout << "finished reduced advection!" << endl;
 
   cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
   reducedAdvectCompressionFriendly();
@@ -390,6 +388,221 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::stepWithObstacle()
 
   // diff the current sim results against ground truth
   diffGroundTruth();
+}
+
+//////////////////////////////////////////////////////////////////////
+// The reduced solver,  with peeled boundaries, with a moving obstacle, 
+// with cubature enabled
+// *No reoredering of the splitting!*
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::stepMovingObstacle(BOX* box)
+{
+  TIMER functionTimer(__FUNCTION__);
+  Real goalTime = 0.1;
+  Real currentTime = 0;
+
+  // compute the CFL condition
+  _dt = goalTime;
+
+  // wipe forces
+  _force.clear();
+
+  // wipe boundaries
+  _velocity.setZeroBorder();
+
+  // compute the forces
+  _velocity.axpy(_dt, _force);
+  _force.clear();
+
+  addVorticity();
+  _velocity.axpy(_dt, _force);
+
+  // a debugging velocity
+  // VECTOR3_FIELD_3D velocityTrue = _velocity;
+  // FIELD_3D densityTrue = _density;
+
+  TIMER projectionTimer("Initial velocity projection");
+
+  ////////////////////////////////////////////////////////////////////
+  // use no-compression projection to compare
+  // VectorXd test_qDot = _velocity.peeledProject(_preadvectU);
+
+  // project into the subspace
+  PeeledCompressedProjectTransformNoSVD(_velocity, &_U_preadvect_data, &_qDot);
+  cout << "finished projection! " << endl;
+  projectionTimer.stop();
+
+  ////////////////////////////////////////////////////////////////////
+  // compare
+  // puts(" Projection into subspace compression error:");
+  // double absoluteError = (_qDot - test_qDot).norm();
+  // printf("   Absolute error: %f\n", absoluteError);
+  // double relativeError = absoluteError / (_qDot.norm());
+  // printf("   Relative error: %f\n", relativeError);
+  // cout << " qDot: " << endl;
+  // cout << _qDot << endl;
+  // cout << " no compression qDot: " << endl;
+  // cout << test_qDot << endl;
+
+  // then advect
+
+  // grab the preadvected values of _velocity and _density
+  // VECTOR3_FIELD_3D preadvectVelocity = _velocity;
+  // FIELD_3D preadvectDensity = _density;
+  // FIELD_3D preadvectHeat = _heat;
+
+  // grab the preadvected values of the 'old' fields
+
+  // VECTOR3_FIELD_3D oldVelocity = _velocityOld;
+  // FIELD_3D oldDensity = _densityOld;
+  // FIELD_3D oldHeat = _heatOld;
+
+  ////////////////////////////////////////////////////////////////////
+  // full advection---modifies _velocity and _density and _heat
+
+  // advectStam();
+  // velocityTrue = _velocity;
+  // densityTrue = _density;
+  ////////////////////////////////////////////////////////////////////
+
+  ////////////////////////////////////////////////////////////////////
+  // reduced advection
+  // _velocity = preadvectVelocity;
+  // _density = preadvectDensity;
+  // _heat = preadvectHeat;
+
+  // _velocityOld = oldVelocity;
+  // _densityOld = oldDensity;
+  // _heatOld = oldHeat;
+  // full-space advect heat and density
+  advectHeatAndDensityStam();
+  cout << "finished advect heat and density!" << endl;
+
+  // reduced advect velocity
+
+  cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+  reducedAdvectCompressionFriendly();
+  cout << "finished compression-friendly advection!" << endl;
+  cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+  
+  //cout << " post advection qDot: " << _qDot << endl;
+  //exit(0);
+
+  ////////////////////////////////////////////////////////////////////
+  // comparing the reduced advection to full advection
+  // _velocity.peeledUnproject(_prediffuseU, _qDot);
+  // cout << "Advection projection. \n";
+  // diffTruth(velocityTrue, densityTrue);
+  //////////////////////////////////////////////////////////////////
+
+  // then diffuse 
+  
+  ////////////////////////////////////////////////////////////////////
+  // Full-space diffusion
+  // if (_peeledDampingFull.rows() <= 0) {
+  //   buildPeeledDampingMatrixFull();
+  // }
+  // VectorXd after = _peeledDampingFull * _velocity.peelBoundary().flattenedEigen();
+  // _velocity.setWithPeeled(after);
+  // velocityTrue = _velocity;
+  
+  // reduced diffusion
+  TIMER diffusionProjectionTimer("Reduced diffusion");
+  reducedPeeledDiffusion();
+  diffusionProjectionTimer.stop();
+
+  puts("Finished reduced diffusion.");
+
+  ////////////////////////////////////////////////////////////////////
+  // full space comparison of diffusion
+  // _velocity.peeledUnproject(_preprojectU, _qDot);
+  // cout << "Diffusion projection.\n";
+  // diffTruth(velocityTrue, densityTrue);
+  ////////////////////////////////////////////////////////////////////
+
+  // do IOP
+
+  ////////////////////////////////////////////////////////////////////
+  // full space boundary stomping
+
+  // update the full IOP matrix (for debugging)
+  
+  // setPeeledSparseMovingIOP(box);
+  // setVelocityNeumann();
+  // VectorXd afterIOP = _neumannIOP * _velocityNeumann; 
+  // _velocity.setWithPeeled(afterIOP); 
+  // velocityTrue = _velocity;
+
+  // reduced IOP
+  reducedSetMovingBox(box);
+
+  puts("Finished reducedSetMovingBox.");
+
+  ////////////////////////////////////////////////////////////////////
+  // obstacle stomping comparison
+
+  // _velocity.peeledUnproject(_projectionIOP, _qDot);
+  // cout << "Stomping boundaries test. \n";
+  // diffTruth(velocityTrue, densityTrue);
+
+  ////////////////////////////////////////////////////////////////////
+  // this will modify _velocity using a full space projection
+  // project();
+  // velocityTrue = _velocity;
+ 
+  // reduced pressure project
+  reducedStagedProject();
+
+  puts("Finished reduced pressure project.");
+
+  ////////////////////////////////////////////////////////////////////
+  // pressure projection comparison 
+  // _velocity.peeledUnproject(_U, _qDot);
+  // cout << "Pressure projection. \n";
+  // diffTruth(velocityTrue, densityTrue);
+
+  // come back to full space
+
+  ////////////////////////////////////////////////////////////////////
+  // using no compression
+  // _velocity.peeledUnproject(_U, _qDot);
+  // velocityTrue = _velocity;
+
+  TIMER unprojectionTimer("Velocity unprojection");
+  PeeledCompressedUnprojectTransform(&_U_final_data, _qDot, &_velocity);
+  unprojectionTimer.stop();
+
+  ////////////////////////////////////////////////////////////////////
+  // test of compression
+  // puts("Unprojection compression test.");
+  // diffTruth(velocityTrue, densityTrue);
+
+  currentTime += _dt;
+
+  cout << " Simulation step " << _totalSteps << " done. " << endl;
+
+  _totalTime += goalTime;
+  _totalSteps++;
+
+  // diff the current sim results against ground truth
+  diffGroundTruth();
+}
+
+//////////////////////////////////////////////////////////////////////
+// do a reduced IOP Neumann boundary for the box
+/////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::reducedSetMovingBox(BOX* box)
+{
+  TIMER functionTimer(__FUNCTION__);
+  
+  char matrixBuffer[256];
+  char vectorBuffer[256];
+  sprintf(matrixBuffer, "%sreducedIOP.matrix.%i", _reducedPath.c_str(), _totalSteps);
+  sprintf(vectorBuffer, "%sreducedNeumann.vector.%i", _reducedPath.c_str(), _totalSteps);
+  EIGEN::read(matrixBuffer, _reducedIOP);
+  EIGEN::read(vectorBuffer, _reducedNeumannVector);
+  _qDot = _reducedIOP * _qDot + _reducedNeumannVector;
+
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1277,22 +1490,15 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedRuntimeBases(string path)
 //////////////////////////////////////////////////////////////////////
 void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedIOP(string path)
 {
-
-  // we need to load preproject, preadvect, and final (??)
-  // nope, just preadvect and final!!
-  
+ // DEBUG
+ puts(" Called loadReducedIOP in the compressed code!");
  TIMER functionTimer(__FUNCTION__);
   if (path.length() == 0)
     path = _reducedPath;
-
-  string filename;
   
   COMPRESSION_DATA compression_data0;
   COMPRESSION_DATA compression_data1;
   COMPRESSION_DATA compression_data2;
-
-  // filename = string("U.preadvect.SVD.data");
-  // ReadSVDData(filename, &compression_data0);
 
   string preadvectFile = _reducedPath + string("U.preadvect.component0");
   int* allData0 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data0);
@@ -1304,28 +1510,21 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedIOP(string path)
   _U_preadvect_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
       &compression_data0, &compression_data1, &compression_data2); 
 
-  _U_preadvect_data.dct_setup(-1);
-  _U_preadvect_data.init_cache();
+  // _U_preadvect_data.dct_setup(-1);
+  // _U_preadvect_data.init_cache();
 
-
+  /*
   COMPRESSION_DATA* preadvect_dataX = _U_preadvect_data.get_compression_dataX();
   const VEC3I& dims = preadvect_dataX->get_dims();
   int numRows = 3 * dims[0] * dims[1] * dims[2]; 
 
-  // EIGEN::read(filename, _preadvectU);
-  // if (_preadvectU.rows() > 1000000)
-
   if (numRows > 1000000) 
     purge();
+    */
 
-  filename = path + string("U.final.matrix");
-  
   COMPRESSION_DATA final_compression_data0;
   COMPRESSION_DATA final_compression_data1;
   COMPRESSION_DATA final_compression_data2;
-
-  // filename = string("U.final.SVD.data");
-  // ReadSVDData(filename, &compression_data0);
 
   string finalFile = _reducedPath + string("U.final.component0");
   allData0 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data0);
@@ -1338,41 +1537,99 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedIOP(string path)
   _U_final_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
       &final_compression_data0, &final_compression_data1, &final_compression_data2); 
 
-  _U_final_data.dct_setup(-1);
-  _U_final_data.init_cache();
+  // _U_final_data.dct_setup(-1);
+  // _U_final_data.init_cache();
 
-  // EIGEN::read(filename, _U);
-  
+  /*
   COMPRESSION_DATA* final_dataX = _U_final_data.get_compression_dataX();
   const VEC3I& dimsFinal = final_dataX->get_dims();
   numRows = 3 * dimsFinal[0] * dimsFinal[1] * dimsFinal[2]; 
 
-  // EIGEN::read(filename, _preadvectU);
-  // if (_U.rows() > 1000000)
   if (numRows > 1000000) 
     purge();
-
-  
-  /*
-  filename = path + string("U.preproject.matrix");
-  UallDataX = NULL;
-  UallDataY = NULL;
-  UallDataZ = NULL;
-  // rewrite into Udecompression_data
-  filename = _reducedPath + string("U.preproject.componentX");
-  ReadBinaryFileToMemory(filename.c_str(), UallDataX, Udecompression_dataX);
-  filename = _reducedPath + string("U.preproject.componentY");
-  ReadBinaryFileToMemory(filename.c_str(), UallDataY, Udecompression_dataY);
-  filename = _reducedPath + string("U.preproject.componentZ");
-  ReadBinaryFileToMemory(filename.c_str(), UallDataZ, Udecompression_dataZ);
-  MATRIX_COMPRESSION_DATA U_preproject_data(UallDataX, UallDataY, UallDataZ,
-      Udecompression_dataX, Udecompression_dataY, Udecompression_dataZ);
-  _U_preproject_data = U_preproject_data;
-  _U_preproject_data.init_cache();
   */
 
   TIMER::printTimings();
 }
+
+
+//////////////////////////////////////////////////////////////////////
+// load all the bases just for full-space debugging
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedIOPAll(string path) 
+{
+  TIMER functionTimer(__FUNCTION__);
+
+  loadReducedIOP(path);
+
+  if (path.length() == 0)
+    path = _reducedPath;
+
+  string filename;
+  
+  filename = path + string("U.preadvect.matrix");
+  EIGEN::read(filename, _preadvectU);
+  if (_preadvectU.rows() > 1000000)
+    purge();
+ 
+  filename = path + string("U.prediffuse.matrix");
+  EIGEN::read(filename, _prediffuseU);
+  if (_prediffuseU.rows() > 1000000)
+    purge();
+
+  filename = path + string("U.preproject.matrix");
+  EIGEN::read(filename, _preprojectU);
+  if (_preprojectU.rows() > 1000000)
+    purge();
+
+  filename = path + string("U.pressure.matrix");
+  EIGEN::read(filename, _pressureU);
+  if (_pressureU.rows() > 1000000)
+    purge();
+
+  filename = path + string("U.final.matrix");
+  EIGEN::read(filename, _U);
+  if (_U.rows() > 1000000)
+    purge();
+ 
+  filename = path + string("U.iop.matrix");
+  EIGEN::read(filename, _projectionIOP);
+  
+  if (_projectionIOP.rows() > 1000000)
+    purge(); 
+
+  
+  COMPRESSION_DATA compression_data0;
+  COMPRESSION_DATA compression_data1;
+  COMPRESSION_DATA compression_data2;
+
+  string preadvectFile = _reducedPath + string("U.preadvect.component0");
+  int* allData0 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data0);
+  preadvectFile = _reducedPath + string("U.preadvect.component1");
+  int* allData1 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data1);
+  preadvectFile = _reducedPath + string("U.preadvect.component2");
+  int* allData2 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data2);
+
+  _U_preadvect_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
+      &compression_data0, &compression_data1, &compression_data2); 
+
+  COMPRESSION_DATA final_compression_data0;
+  COMPRESSION_DATA final_compression_data1;
+  COMPRESSION_DATA final_compression_data2;
+
+  string finalFile = _reducedPath + string("U.final.component0");
+  allData0 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data0);
+  finalFile = _reducedPath + string("U.final.component1");
+  allData1 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data1);
+  finalFile = _reducedPath + string("U.final.component2");
+  allData2 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data2);
+
+  _U_final_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
+      &final_compression_data0, &final_compression_data1, &final_compression_data2); 
+  
+  TIMER::printTimings();
+}
+
 //////////////////////////////////////////////////////////////////////
 // compute the velocity-to-divergence matrix
 //////////////////////////////////////////////////////////////////////
@@ -1799,3 +2056,25 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::accumAdvectRequests(const MatrixXd& cel
   requestPair = pair<int, CUBATURE_DATA>(blockNumber, cubatureData);
   requestedBlocks.insert(requestPair);
 }
+
+
+//////////////////////////////////////////////////////////////////////
+// diff the passed in sim results against the true results
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::diffTruth(const VECTOR3_FIELD_3D& testVelocity, 
+    const FIELD_3D& testDensity)
+{
+  cout << "Invoking diffTruth: \n";
+  VectorXd diff = testVelocity.peelBoundary().flattenedEigen() - _velocity.peelBoundary().flattenedEigen();
+  _velocityErrorAbs.push_back(diff.norm());
+  _velocityErrorRelative.push_back(diff.norm() / _velocity.peelBoundary().flattened().norm2());
+  cout << " velocity abs error:      " << _velocityErrorAbs.back() << endl;
+  cout << " velocity relative error: " << _velocityErrorRelative.back() << endl;
+
+  diff = testDensity.peelBoundary().flattenedEigen() - _density.peelBoundary().flattenedEigen();
+  _densityErrorAbs.push_back(diff.norm());
+  _densityErrorRelative.push_back(diff.norm() / _density.peelBoundary().flattened().norm2());
+  cout << " density abs error:      " << _densityErrorAbs.back() << endl;
+  cout << " density relative error: " << _densityErrorRelative.back() << endl;
+}
+

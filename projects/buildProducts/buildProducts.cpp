@@ -6,6 +6,17 @@
 using std::string;
 
 SUBSPACE_FLUID_3D_EIGEN* fluid = NULL;
+BOX* box = NULL;
+// box parameters
+const VEC3F boxCenter(0.5, 0.5, 0.5);
+const VEC3F boxLengths(0.4, 0.05, 0.15);
+
+// period over which the box revolves
+const double period = 4.0;
+
+// period over which the box translates
+const double translationPeriod = 10.0;
+
 
 int main(int argc, char* argv[]) {
   // read in the cfg file
@@ -51,8 +62,17 @@ int main(int argc, char* argv[]) {
   cout << " Using iop: " << usingIOP << endl;
 
 	fluid = new SUBSPACE_FLUID_3D_EIGEN(xRes, yRes, zRes, reducedPath, &boundaries[0], usingIOP);
+  fluid->setTotalReducedSteps(simulationSnapshots);
+
+  box = new BOX(boxCenter, boxLengths, period, translationPeriod);
+  box->set_dt(fluid->dt());
+  // linke the fluid with the obstacle
+  fluid->setObstacle(*box);
+
+  fluid->buildObstacleMatrices();
 
   delete fluid;
+  delete box;
 
   return 0;
 }

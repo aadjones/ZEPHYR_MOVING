@@ -2281,6 +2281,8 @@ int* ReadBinaryFileToMemory(const char* filename,
     fread(allData, totalLength, sizeof(int), pFile);
   }
 
+  fclose(pFile);
+
   return allData;
 }
 
@@ -2382,6 +2384,7 @@ int* ReadBinaryFileToMemoryGammaTesting(const char* filename,
     fread(allData, totalLength, sizeof(int), pFile);
   }
 
+  fclose(pFile);
   return allData;
 }
 

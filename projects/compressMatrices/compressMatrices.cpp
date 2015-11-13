@@ -52,6 +52,7 @@ void PreprocessEncoder(COMPRESSION_DATA* data0, COMPRESSION_DATA* data1, COMPRES
 
 // rescale the singular values to use for damping
 void PreprocessSingularValues(const char* filename, double threshold); 
+
 ////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////
@@ -70,7 +71,7 @@ int main(int argc, char* argv[]) {
   int xRes = parser.getInt("xRes", 48);
   int yRes = parser.getInt("yRes", 64);
   int zRes = parser.getInt("zRes", 48);
-  int numCols = parser.getInt("reduced snapshots", 47);
+  int numCols = parser.getInt("reduced snapshots", 50);
   bool usingIOP = parser.getBool("iop", 0);
   cout << " Using IOP: " << usingIOP << endl;
   cout << " Block size: " << BLOCK_SIZE << endl; 
@@ -78,7 +79,6 @@ int main(int argc, char* argv[]) {
   xRes -= 2;
   yRes -= 2;
   zRes -= 2;
-  numCols += 1;
 
   VEC3I dims(xRes, yRes, zRes);
   
@@ -89,11 +89,6 @@ int main(int argc, char* argv[]) {
 
   MatrixXd U_preadvect(numRows, numCols);
   MatrixXd U_final(numRows, numCols);
-
-  if (usingIOP) {
-    // MatrixXd U(numRows, numCols);
-    // U_preproject = U;
-  }
 
   int nBits = parser.getInt("nBits", 24); 
   cout << " nBits: " << nBits << endl;
@@ -110,17 +105,11 @@ int main(int argc, char* argv[]) {
 
   string preAdvectPath = reducedPath + string("U.preadvect.matrix");
   string finalPath = reducedPath + string("U.final.matrix");
-  // string preprojectPath = reducedPath + string("U.preproject.matrix");
-  // string preAdvectPath("scratch/Q.preadvect.bigmatrix");
-  // string finalPath("scratch/Q.final.bigmatrix");
 
   EIGEN::read(preAdvectPath, U_preadvect);
   EIGEN::read(finalPath, U_final);
   // EIGEN::readBig(preAdvectPath, U_preadvect);
   // EIGEN::readBig(finalPath, U_final);
-  if (usingIOP) {
-    // EIGEN::read(preprojectPath, U_preproject);
-  }
 
   // set the parameters in compression data
   COMPRESSION_DATA preadvect_compression_data0(dims, numCols, nBits, percent);
@@ -129,11 +118,6 @@ int main(int argc, char* argv[]) {
   COMPRESSION_DATA final_compression_data0(dims, numCols, nBits, percent);
   COMPRESSION_DATA final_compression_data1(dims, numCols, nBits, percent);
   COMPRESSION_DATA final_compression_data2(dims, numCols, nBits, percent);
-  // COMPRESSION_DATA preproject_compression_data;
-  if (usingIOP) {
-    // COMPRESSION_DATA data(dims, numCols, q, power, nBits);
-    // preproject_compression_data = data;
-  }
 
   // compute some additional parameters for compression data
   const char* preadvectSingularFilename = "singularValues_preadvect.vector";
@@ -143,18 +127,12 @@ int main(int argc, char* argv[]) {
   PreprocessEncoder(&final_compression_data0, &final_compression_data1, &final_compression_data2,
       maxIterations, finalSingularFilename);
 
-  if (usingIOP) {
-    // PreprocessEncoder(preproject_compression_data);
-  }
 
   // write a binary file for each scalar field component
 
   string preadvectFilename = reducedPath + string("U.preadvect.component");
   string finalFilename = reducedPath + string("U.final.component");
-  // string preprojectFilename = reducedPath + string("U.preproject.component");
 
-  // string preadvectFilename = reducedPath + string("Q.preadvect.component");
-  // string finalFilename = reducedPath = string("Q.final.component");
 
   // write out the compressed matrix files
 
@@ -167,13 +145,15 @@ int main(int argc, char* argv[]) {
   }
 
     else {
-      /*
       CompressAndWriteMatrixComponents(preadvectFilename.c_str(), U_preadvect, &preadvect_compression_data0,
         &preadvect_compression_data1, &preadvect_compression_data2);
     
       CompressAndWriteMatrixComponents(finalFilename.c_str(), U_final, &final_compression_data0, 
         &final_compression_data1, &final_compression_data2);
-      */
+      
+
+      // ADJ: this is old experimental code testing out the different DCT/DST hybrids
+      /*
       for (int planType = 0; planType < 8; planType++) {
 
         CompressAndWriteMatrixComponentsDST(preadvectFilename.c_str(), planType, U_preadvect, &preadvect_compression_data0,
@@ -182,16 +162,9 @@ int main(int argc, char* argv[]) {
         CompressAndWriteMatrixComponentsDST(finalFilename.c_str(), planType, U_final, &final_compression_data0,
           &final_compression_data1, &final_compression_data2);
       } 
+      */
 
     }
-  
-  if (usingIOP) {
-    // for (int component = 0; component < 3; component++) {
-      // cout << "Writing component: " << component << endl;
-      // CompressAndWriteMatrixComponent(preprojectFilename.c_str(), U_preproject, component, preproject_compression_data);
-    // }
-  }
-     
 
   TIMER::printTimings();
   

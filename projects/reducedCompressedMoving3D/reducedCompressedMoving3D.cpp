@@ -55,6 +55,19 @@ bool captureMovie = true;
 // fluid being simulated
 SUBSPACE_FLUID_3D_COMPRESSED_EIGEN* fluid = NULL;
 
+// moving obstacle instantiation
+BOX* box = NULL;
+
+// box parameters
+const VEC3F boxCenter(0.5, 0.5, 0.5);
+const VEC3F boxLengths(0.4, 0.05, 0.15);
+
+// period over which the box revolves
+const double period = 4.0;
+
+// period over which the box translates
+const double translationPeriod = 10.0;
+
 // ground truth
 FLUID_3D_MIC* ground = NULL;
 
@@ -63,17 +76,16 @@ QUICKTIME_MOVIE movie;
 
 void runOnce();
 void runEverytime();
+// helper function to write unique filenames
+bool fileExists(const string& filename);
+// helper function to write to quicktime movie
+void writeToQuicktime();
 
-// global resolutions, for scope reasons
-// int g_xRes = 48;
-// int g_yRes = 64;
-// int g_zRes = 48;
+// resolutions
+int xRes = 0;
+int yRes = 0;
+int zRes = 0;
 
-int g_xRes = 200;
-int g_yRes = 266;
-int g_zRes = 200;
-
-VEC3F cellCenter(int x, int y, int z);
 vector<VECTOR> snapshots;
 
 // user configuration
@@ -163,12 +175,11 @@ void glutDisplay()
       /////////////////////////////////////////////////////////////////
     glPopMatrix();
    
+    // draw the obstacle
     glPushMatrix();
-      glTranslatef(cellCenter(g_xRes, g_yRes, g_zRes)[0], cellCenter(g_xRes, g_yRes, g_zRes)[1], cellCenter(g_xRes, g_yRes, g_zRes)[2]);
-      // draw a sphere of radius 0.1 with 10 latitudes/longitudes
-      glutWireSphere(0.1, 10, 10);
+      box->draw();
     glPopMatrix();  
-    //drawAxes();
+
   glvu.EndFrame();
   // if we're recording a movie, capture a frame
   if (captureMovie) {
@@ -289,8 +300,9 @@ int glvuWindow()
   glEnable (GL_BLEND);
   glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+  // ADJ: modify the Eye vector to change the scene's perspective
   glvuVec3f ModelMin(-10,-10,-10), ModelMax(10,10,10), 
-        Eye(0.5,0.5,2), LookAtCntr(0.5,0.5,0.5),  Up(0,1,0);
+        Eye(1.5,0.5,2), LookAtCntr(0.5,0.5,0.5),  Up(0,1,0);
 
   float Yfov = 45;
   float Aspect = 1;
@@ -356,19 +368,20 @@ int main(int argc, char *argv[])
   cout << "Using IOP: " << usingIOP << endl;
 
   bool fastPow = parser.getBool("fast pow", false);
-  cout << " fast pow: " << fastPow << endl;
+  cout << " Fast pow: " << fastPow << endl;
 
   bool debug = parser.getBool("debug", 0);
   cout << "Debug: " << debug << endl;
 
-  int planType = parser.getInt("planType", 0);
-  printf("Plan type: %i\n", planType);
+	fluid = new SUBSPACE_FLUID_3D_COMPRESSED_EIGEN(xRes, yRes, zRes, reducedPath, &boundaries[0], usingIOP);
+  // fluid->loadReducedIOP(string(""));
+  // For debugging, use loadReducedIOPAll
+  fluid->loadReducedIOPAll(string(""));
+  // puts("finished loadReducedIOP");
 
-	fluid = new SUBSPACE_FLUID_3D_COMPRESSED_EIGEN(xRes, yRes, zRes, reducedPath, &boundaries[0], usingIOP, planType);
-  // fluid->loadReducedIOP(string(""), debug, planType);
-  fluid->loadReducedIOP(string(""));
-  puts("finished loadReducedIOP");
-  // fluid->initCompressionData(planType);
+  box = new BOX(boxCenter, boxLengths, period, translationPeriod);
+  box->set_dt(fluid->dt());
+
   fluid->initCompressionData();
 
   fluid->fullRankPath() = snapshotPath;
@@ -398,73 +411,94 @@ void runEverytime()
 {
   if (animate)
   {
-    static int steps = 0;
-    cout << " Simulation step " << steps << endl;
-    fluid->addSmokeColumn();
-    fluid->stepWithObstacle();
+    static int step = 0;
+    cout << " Simulation step " << 1 + step << endl;
+
+    if (step == 0) {
+      fluid->addSmokeSphere();
+      fluid->setInitialVelocity(box);
+    }
+
+    fluid->stepMovingObstacle(box);
+
+    box->translate_center();
+    box->spin();
+
+    box->update_time();
 
     /* 
     char buffer[256];
     string path = snapshotPath;
-    sprintf(buffer, "%sfluid.%04i.fluid3d", path.c_str(), steps);
+    sprintf(buffer, "%sfluid.%04i.fluid3d", path.c_str(), step);
     string filename(buffer);
     ground->readGz(filename);
     cout << " Loaded in ground. " << endl;
     */
 
-    steps++;
 
-    if (steps == simulationSnapshots + 1) 
-    {
-      // if we were already capturing a movie
-      if (captureMovie)
-      {
-        // write out the movie
-        movie.writeMovie("reducedIOPmovie.mov");
-
-        // reset the movie object
-        movie = QUICKTIME_MOVIE();
-
-        // stop capturing frames
-        captureMovie = false;
-      }
-    }
-    //if (steps % 10 == 0)
-    {
+    // if (step % 10 == 0)
+    // {
       VECTOR::printVertical = false;
-      TIMER::printTimingsPerFrame(steps);
+      TIMER::printTimingsPerFrame(step);
       cout << " velocityAbs = " << VECTOR(fluid->velocityErrorAbs()) << ";" << endl;
       cout << " velocityRelative = " << VECTOR(fluid->velocityErrorRelative()) << ";" << endl;
       cout << " densityAbs = " << VECTOR(fluid->densityErrorAbs()) << ";" << endl;
       cout << " densityRelative = " << VECTOR(fluid->densityErrorRelative()) << ";" << endl;
-    }
-
+    // }
+    
     // check if we're done
-    if (steps == simulationSnapshots + 2)
+    if (step == simulationSnapshots - 1) 
+    {
+      TIMER::printTimings();
+      // if we were already capturing a movie
+      if (captureMovie) {
+        writeToQuicktime();
+        // stop capturing frames
+        captureMovie = false;
+      }
       exit(0);
+    }
+   
+    step++;
   }
 }
 
-VEC3F cellCenter(int x, int y, int z) 
+//////////////////////////////////////////////////////////////////////
+// Helper functions
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+
+// check if a file exists
+//////////////////////////////////////////////////////////////////////
+bool fileExists(const string& filename)
 {
-  double dx = 1.0 / g_xRes;
-  double dy = 1.0 / g_yRes;
-  double dz = 1.0 / g_zRes;
+  FILE* file;
+  file = fopen(filename.c_str(), "rb");
+  
+  if (file == NULL)
+    return false;
 
-  VEC3F halfLengths(0.5, 0.5, 0.5);
+  fclose(file);
+  return true;
+}
 
-  // set it to the lower corner
-  VEC3F final = VEC3F(0.0, 0.0, 0.0) - halfLengths;
+//////////////////////////////////////////////////////////////////////
+// write to unique quicktime movie file
+//////////////////////////////////////////////////////////////////////
+void writeToQuicktime()
+{
+  // write out the movie
+  int i = 0;
+  char buffer[256];
+  sprintf(buffer, "movieObstacleSubspaceCompressed%i.mov", i);
+  string movieString(buffer);
 
-  // displace to the NNN corner
-  final[0] += x * dx;
-  final[1] += y * dy;
-  final[2] += z * dz;
-
-  // displace it to the cell center
-  final[0] += dx * 0.5;
-  final[1] += dy * 0.5;
-  final[2] += dz * 0.5;
-
-  return final;
+  while (fileExists(movieString)) {
+    i++;
+    sprintf(buffer, "movieObstacleSubspaceCompressed%i.mov", i);
+    movieString = string(buffer);
+  }
+  movie.writeMovie(movieString.c_str());
+  // reset the movie object
+  movie = QUICKTIME_MOVIE();
 }
