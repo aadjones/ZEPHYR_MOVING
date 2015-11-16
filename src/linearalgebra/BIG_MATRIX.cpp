@@ -331,12 +331,11 @@ void BIG_MATRIX::outOfCoreSVD(const string& filenamePrefix, const string& reduce
   }
   // ADJ: added to spec out the singular values
   cout << " Writing out singular values... " << endl;
-  char svdBuffer[16];
-  static int nnn = 0;
-  sprintf(svdBuffer, "%i", nnn);
-  string svdFilename = string("singularValues_") + string(svdBuffer) + string(".vector");
+  int prefixLength = reducedPath.length();
+  string svdFilename = filenamePrefix.substr(1 + prefixLength, string::npos); 
+  svdFilename.insert(0, _scratchPath);
+  svdFilename += string(".singularValues.vector"); 
   S.write(svdFilename.c_str());
-  nnn++;
   cout << " Done!" << endl;
   cout << " Keeping " << keepingColumns << " of " << S.size() << " columns " << endl;
   cout << "=======================================" << endl;
