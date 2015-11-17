@@ -117,12 +117,13 @@ class COMPRESSION_DATA {
   
   void set_dampingArrayList() {
     // choose the number of different discrete gamma values to clamp to
-    // approximately nBits/2 is a first test
-    int numGammas = 17; 
+    // approximately nBits (32) * 4 is a first test
+    int numGammas = 129; 
     _dampingArrayList.resize(numGammas);
     for (int i = 0; i < numGammas; i++) {
       _dampingArrayList[i] = _dampingArray;
-      _dampingArrayList[i].toFastPower(2 * i);
+      double pow = i / 4.0;
+      _dampingArrayList[i].toPower(pow);
     }
   }
 

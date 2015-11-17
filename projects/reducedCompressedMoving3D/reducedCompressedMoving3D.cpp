@@ -367,17 +367,17 @@ int main(int argc, char *argv[])
   bool usingIOP = parser.getBool("iop", 0);
   cout << "Using IOP: " << usingIOP << endl;
 
-  bool fastPow = parser.getBool("fast pow", false);
-  cout << " Fast pow: " << fastPow << endl;
+  // bool fastPow = parser.getBool("fast pow", false);
+  // cout << " Fast pow: " << fastPow << endl;
 
   bool debug = parser.getBool("debug", 0);
   cout << "Debug: " << debug << endl;
 
 	fluid = new SUBSPACE_FLUID_3D_COMPRESSED_EIGEN(xRes, yRes, zRes, reducedPath, &boundaries[0], usingIOP);
-  // fluid->loadReducedIOP(string(""));
-  // For debugging, use loadReducedIOPAll
-  fluid->loadReducedIOPAll(string(""));
-  // puts("finished loadReducedIOP");
+  fluid->loadReducedIOP(string(""));
+  // For debugging, use loadReducedIOPAll here and stepMovingDebug in runEverytime.
+  // fluid->loadReducedIOPAll(string(""));
+  puts("finished loadReducedIOP");
 
   box = new BOX(boxCenter, boxLengths, period, translationPeriod);
   box->set_dt(fluid->dt());
@@ -388,7 +388,7 @@ int main(int argc, char *argv[])
   fluid->vorticityEps() = vorticity;
 
   // set the FIELD_3D static
-  FIELD_3D::usingFastPow() = fastPow;
+  // FIELD_3D::usingFastPow() = fastPow;
   
   // ground = new FLUID_3D_MIC(xRes, yRes, zRes, 0);
  
@@ -419,6 +419,7 @@ void runEverytime()
       fluid->setInitialVelocity(box);
     }
 
+    // fluid->stepMovingObstacleDebug(box);
     fluid->stepMovingObstacle(box);
 
     box->translate_center();
@@ -439,7 +440,8 @@ void runEverytime()
     // if (step % 10 == 0)
     // {
       VECTOR::printVertical = false;
-      TIMER::printTimingsPerFrame(step);
+      // ADJ: commenting out the timingsPerFrame for now since it seems bugged
+      // TIMER::printTimingsPerFrame(step);
       cout << " velocityAbs = " << VECTOR(fluid->velocityErrorAbs()) << ";" << endl;
       cout << " velocityRelative = " << VECTOR(fluid->velocityErrorRelative()) << ";" << endl;
       cout << " densityAbs = " << VECTOR(fluid->densityErrorAbs()) << ";" << endl;

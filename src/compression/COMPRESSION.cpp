@@ -1133,7 +1133,7 @@ void TuneGammaFastPow(const FIELD_3D& F, int blockNumber, int col,
   // arbitrarily set epsilon to be 0.5%
   double epsilon = 0.005;
   double gamma = 0.5 * (upper + lower);
-  damp->toFastPower(gamma);
+  damp->toPower(gamma);
   
   // the total amount of energy in the Fourier space
   double totalEnergy = F.sumSq();
@@ -1154,7 +1154,7 @@ void TuneGammaFastPow(const FIELD_3D& F, int blockNumber, int col,
       // from which we raise it to the new gamma
       //damp->toPower(gamma / upper);
       (*damp) = vanilla;
-      damp->toFastPower(gamma);
+      damp->toPower(gamma);
     }
 
     else { // not enough damping; need to increase gamma
@@ -1165,7 +1165,7 @@ void TuneGammaFastPow(const FIELD_3D& F, int blockNumber, int col,
       // from which we raise it to the new gamma
       //damp->toPower(gamma / lower);
       (*damp) = vanilla;
-      damp->toFastPower(gamma);
+      damp->toPower(gamma);
     }
 
     // update percentEnergy
@@ -1218,10 +1218,10 @@ void TuneGammaFastPowQuantized(const FIELD_3D& F, int blockNumber, int col,
   double lower = 0.0;
   // QUESTION: how should we define upper?
   double upper = nBits;
-  // arbitrarily set epsilon to be 0.5%
-  double epsilon = 0.005;
+  // arbitrarily set epsilon to be 0.25%
+  double epsilon = 0.0025;
   double gamma = 0.5 * (upper + lower);
-  damp->toFastPower(gamma);
+  damp->toPower(gamma);
   
   // the total amount of energy in the Fourier space
   double totalEnergy = F.sumSq();
@@ -1242,7 +1242,7 @@ void TuneGammaFastPowQuantized(const FIELD_3D& F, int blockNumber, int col,
       // from which we raise it to the new gamma
       //damp->toPower(gamma / upper);
       (*damp) = vanilla;
-      damp->toFastPower(gamma);
+      damp->toPower(gamma);
     }
 
     else { // not enough damping; need to increase gamma
@@ -1253,14 +1253,15 @@ void TuneGammaFastPowQuantized(const FIELD_3D& F, int blockNumber, int col,
       // from which we raise it to the new gamma
       //damp->toPower(gamma / lower);
       (*damp) = vanilla;
-      damp->toFastPower(gamma);
+      damp->toPower(gamma);
     }
    
-    // round gamma to the nearest multiple of 2 
-    gamma = 2 * floor((gamma + 1) / 2);
+    // round gamma to the nearest 'quarter' integer 
+    // gamma = 2 * floor((gamma + 1) / 2);
+    gamma = rint(4 * gamma) / 4.0;
     // recompute the final quantized damping array
     (*damp) = vanilla;
-    damp->toFastPower(gamma);
+    damp->toPower(gamma);
     // update percentEnergy
     damped = ( F / (*damp) );
     damped.roundInt();
@@ -1287,8 +1288,8 @@ void TuneGammaFastPowQuantized(const FIELD_3D& F, int blockNumber, int col,
 }
 
 ////////////////////////////////////////////////////////
-// simply sets gamma equal to 1.0, so that it is equivalent
-// to doing nothing to the precomputed damping array. for
+// simply sets gamma equal to 0.0, so that it is equivalent
+// to doing no damping. for
 // debug/timing purposes only.
 ///////////////////////////////////////////////////////
 void TuneGammaDebug(const FIELD_3D& F, int blockNumber, int col, 
@@ -1297,7 +1298,7 @@ void TuneGammaDebug(const FIELD_3D& F, int blockNumber, int col,
   TIMER functionTimer(__FUNCTION__);
 
   // set gamma to zero always, for debugging
-  double gamma = 1.0; 
+  double gamma = 0.0; 
   
   // fetch data to update gammaList
   MatrixXd* gammaListMatrix = data->get_gammaListMatrix();
@@ -1310,6 +1311,7 @@ void TuneGammaDebug(const FIELD_3D& F, int blockNumber, int col,
   }
 
   (*gammaListMatrix)(blockNumber, col) = gamma;
+  damp->toPower(gamma);
 }
 
 ////////////////////////////////////////////////////////
@@ -1340,12 +1342,12 @@ void EncodeBlock(const FIELD_3D& F, int blockNumber, int col, COMPRESSION_DATA* 
   // finds best gamma given the percent. updates gammaList
   // and updates damp
   if (FIELD_3D::usingFastPow()) {
-    // TuneGammaFastPow(F, blockNumber, col, data, &damp);
-    TuneGammaFastPowQuantized(F, blockNumber, col, data, &damp); 
+    TuneGammaFastPow(F, blockNumber, col, data, &damp);
+    // TuneGammaFastPowQuantized(F, blockNumber, col, data, &damp); 
   }
   else {
-    // TuneGamma(F, blockNumber, col, data, &damp);
-    TuneGammaFastPowQuantized(F, blockNumber, col, data, &damp);
+    TuneGammaFastPow(F, blockNumber, col, data, &damp);
+    // TuneGammaFastPowQuantized(F, blockNumber, col, data, &damp);
   }
   // fill the return value with rounded damped entries
   RoundFieldToInt( (F / damp), quantized );
@@ -1374,12 +1376,13 @@ void EncodeBlockDebug(const FIELD_3D& F, int blockNumber, int col, COMPRESSION_D
   int numBlocks = data->get_numBlocks();
   assert(blockNumber >= 0 && blockNumber < numBlocks);
  
-  // sets gamma to 1.0 for debugging purposes.
+  // sets gamma to 0.0 for debugging purposes.
   // does not in fact modify damp at all.
   TuneGammaDebug(F, blockNumber, col, data, &damp);
 
   // fill the return value with rounded damped entries
-  RoundFieldToInt( (F / damp), quantized );
+  // since it is in debug mode, don't damp at all!
+  RoundFieldToInt( F, quantized );
 
 }
 
@@ -1484,7 +1487,7 @@ void DecodeBlockWithCompressionDataSparseStackless()
   for (unsigned int x = 0; x < nonZeros.size(); x++)
   {
     const int i = nonZeros[x];
-    decoded[i] *= FIELD_3D::fastPow(dampingArray[i],gamma) * sInv;
+    decoded[i] *= pow(dampingArray[i],gamma) * sInv;
   }
 }
 
@@ -1511,8 +1514,8 @@ void DecodeBlockWithCompressionDataSparseStacklessDebug()
   //double s = (*sList)(_blockNumber, _col);
   //double sInv = 1.0 / s;
   const double sInv = 1.0 / (*sList)(_blockNumber, _col);
-  MatrixXd* gammaList = _compression_data->get_gammaListMatrix();
-  const double gamma = (*gammaList)(_blockNumber, _col);
+  // MatrixXd* gammaList = _compression_data->get_gammaListMatrix();
+  // const double gamma = (*gammaList)(_blockNumber, _col);
     
   // dequantize by inverting the scaling by s and contracting by the 
   // appropriate gamma-modulated damping array
@@ -1520,14 +1523,14 @@ void DecodeBlockWithCompressionDataSparseStacklessDebug()
   // TK: Lots of time can be spent here, but it appears to be because of
   // the pow call, not because the sparsity is not fully exploited
   TIMER dampingTimer("Decode Damping Copy");
-  const FIELD_3D& dampingArray = _compression_data->get_dampingArray();
+  // const FIELD_3D& dampingArray = _compression_data->get_dampingArray();
   for (unsigned int x = 0; x < nonZeros.size(); x++)
   {
     const int i = nonZeros[x];
     // decoded[i] *= FIELD_3D::fastPow(dampingArray[i],gamma) * sInv;
-    // since every gamma is 1.0 in debug mode, we don't need to even
+    // since every gamma is 0.0 in debug mode, we don't need to even
     // bother with a fastPow
-    decoded[i] *= dampingArray[i] * sInv;
+    decoded[i] *= sInv;
   }
 }
 ////////////////////////////////////////////////////////
@@ -1564,7 +1567,7 @@ void DecodeBlockWithCompressionDataSparseNoFastPow(const INTEGER_FIELD_3D& intBl
   const double gamma = (*gammaList)(blockNumber, col);
   // DEBUG
   // cout << "read in gamma: " << gamma << endl;
-  int arrayListIndex = (int) ( gamma / 2);  
+  int arrayListIndex = (int) ( 4 * gamma );  
   // cout << "arrayListIndex: " << arrayListIndex << endl;
   // dequantize by inverting the scaling by s and contracting by the 
   // appropriate gamma-modulated damping array
@@ -1576,7 +1579,9 @@ void DecodeBlockWithCompressionDataSparseNoFastPow(const INTEGER_FIELD_3D& intBl
     for (unsigned int x = 0; x < nonZeros.size(); x++)
     {
       const int i = nonZeros[x];
-      decoded[i] *= dampingArray[i] * sInv;
+      // there was no damping in the debug case at all, so
+      // we just dequantize
+      decoded[i] *= sInv;
     }
   }
   else {
@@ -1628,14 +1633,15 @@ void DecodeBlockWithCompressionDataSparse(const INTEGER_FIELD_3D& intBlock,
     for (unsigned int x = 0; x < nonZeros.size(); x++)
     {
       const int i = nonZeros[x];
-      decoded[i] *= dampingArray[i] * sInv;
+      // no damping at all in the debug case
+      decoded[i] *= sInv;
     }
   }
   else {
     for (unsigned int x = 0; x < nonZeros.size(); x++)
     {
       const int i = nonZeros[x];
-      decoded[i] *= FIELD_3D::fastPow(dampingArray[i],gamma) * sInv;
+      decoded[i] *= pow(dampingArray[i],gamma) * sInv;
     }
   }
 }
@@ -2244,10 +2250,10 @@ int* ReadBinaryFileToMemory(const char* filename,
     gammaListMatrix->resize(numBlocks, numCols);
     fread(gammaListMatrix->data(), blocksXcols, sizeof(double), pFile);
     // DEBUG
-    // string gammaListName(filename);
-    // string extension("gammaList.matrix");
-    // gammaListName = gammaListName + extension;
-    // EIGEN::write(gammaListName, *gammaListMatrix); 
+    string gammaListName(filename);
+    string extension(".gammaList.matrix");
+    gammaListName = gammaListName + extension;
+    EIGEN::write(gammaListName, *gammaListMatrix); 
 
     // do the same for the blockLengthsMatrix, except the data are ints
     MatrixXi* blockLengthsMatrix = data->get_blockLengthsMatrix();
@@ -3276,9 +3282,9 @@ void GetSubmatrixNoSVDSparse(int startRow, MATRIX_COMPRESSION_DATA* data, Matrix
       RunLengthDecodeBinaryInPlaceSparse(allDataX, blockNumber, i, reverseZigzag, compression_dataX, unflattened, nonZeros);
 
       // undo the scaling from the quantizer
-      //DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataX, decodedBlock.data(), nonZeros);
+      DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataX, decodedBlock.data(), nonZeros);
       // DEBUG
-      DecodeBlockWithCompressionDataSparseNoFastPow(unflattened, blockNumber, i, compression_dataX, decodedBlock.data(), nonZeros);
+      // DecodeBlockWithCompressionDataSparseNoFastPow(unflattened, blockNumber, i, compression_dataX, decodedBlock.data(), nonZeros);
 
       // inverse DCT
       DCT_Smart_Unitary(plan, direction, in, &decodedBlock);
@@ -3313,8 +3319,8 @@ void GetSubmatrixNoSVDSparse(int startRow, MATRIX_COMPRESSION_DATA* data, Matrix
       // undo the scaling from the quantizer
       // TK: Do it on the raw pointer instead
       //DecodeBlockWithCompressionData(unflattened, blockNumber, i, compression_dataY, decodedBlock.data()); 
-      //DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataY, decodedBlock.data(), nonZeros);
-      DecodeBlockWithCompressionDataSparseNoFastPow(unflattened, blockNumber, i, compression_dataY, decodedBlock.data(), nonZeros);
+      DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataY, decodedBlock.data(), nonZeros);
+      // DecodeBlockWithCompressionDataSparseNoFastPow(unflattened, blockNumber, i, compression_dataY, decodedBlock.data(), nonZeros);
       // inverse DCT
       DCT_Smart_Unitary(plan, direction, in, &decodedBlock);
 
@@ -3349,8 +3355,8 @@ void GetSubmatrixNoSVDSparse(int startRow, MATRIX_COMPRESSION_DATA* data, Matrix
       // TK: Do it on the raw pointer instead
       //DecodeBlockWithCompressionData(unflattened, blockNumber, i, compression_dataZ, &decodedBlock); 
       //DecodeBlockWithCompressionData(unflattened, blockNumber, i, compression_dataZ, decodedBlock.data()); 
-      //DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataZ, decodedBlock.data(), nonZeros);
-      DecodeBlockWithCompressionDataSparseNoFastPow(unflattened, blockNumber, i, compression_dataZ, decodedBlock.data(), nonZeros);
+      DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataZ, decodedBlock.data(), nonZeros);
+      // DecodeBlockWithCompressionDataSparseNoFastPow(unflattened, blockNumber, i, compression_dataZ, decodedBlock.data(), nonZeros);
       // inverse DCT
       DCT_Smart_Unitary(plan, direction, in, &decodedBlock);
 
@@ -4040,10 +4046,10 @@ void DecodeScalarFieldEigenSparse(COMPRESSION_DATA* compression_data, int* allDa
     // TK: Do the decode in a way that avoids the need to copy into an Eigen
     // VectorXd at the end
     VectorXd& final = (*decoded)[blockNumber];
-    /*DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, col,
-        compression_data, final.data(), nonZeros);*/
-    DecodeBlockWithCompressionDataSparseNoFastPow(unflattened, blockNumber, col, 
+    DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, col,
         compression_data, final.data(), nonZeros);
+    /*DecodeBlockWithCompressionDataSparseNoFastPow(unflattened, blockNumber, col, 
+        compression_data, final.data(), nonZeros);*/
     unflattened.clear(nonZeros.data(), nonZeros.size());
   }
 }

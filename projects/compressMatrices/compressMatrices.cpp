@@ -53,6 +53,9 @@ void PreprocessEncoder(COMPRESSION_DATA* data0, COMPRESSION_DATA* data1, COMPRES
 // rescale the singular values to use for damping
 void PreprocessSingularValues(const char* filename, double threshold); 
 
+// check if a file exists
+bool fileExists(const string& filename);
+
 ////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////
@@ -99,17 +102,15 @@ int main(int argc, char* argv[]) {
   int debug = parser.getBool("debug", false);
   cout << "debug: " << debug << endl;
 
-  bool usingFastPow = parser.getBool("fast pow", false);
-  cout << " fast pow: " << usingFastPow << endl;
-  FIELD_3D::usingFastPow() = usingFastPow;
+  // int usingFastPow = parser.getBool("fast pow", false);
+  // cout << " fast pow: " << usingFastPow << endl;
+  // FIELD_3D::usingFastPow() = usingFastPow;
 
   string preAdvectPath = reducedPath + string("U.preadvect.matrix");
   string finalPath = reducedPath + string("U.final.matrix");
 
   EIGEN::read(preAdvectPath, U_preadvect);
   EIGEN::read(finalPath, U_final);
-  // EIGEN::readBig(preAdvectPath, U_preadvect);
-  // EIGEN::readBig(finalPath, U_final);
 
   // set the parameters in compression data
   COMPRESSION_DATA preadvect_compression_data0(dims, numCols, nBits, percent);
@@ -119,6 +120,7 @@ int main(int argc, char* argv[]) {
   COMPRESSION_DATA final_compression_data1(dims, numCols, nBits, percent);
   COMPRESSION_DATA final_compression_data2(dims, numCols, nBits, percent);
 
+  /*
   // compute some additional parameters for compression data
   const char* preadvectSingularFilename = "singularValues_preadvect.vector";
   PreprocessEncoder(&preadvect_compression_data0, &preadvect_compression_data1, &preadvect_compression_data2, 
@@ -126,7 +128,45 @@ int main(int argc, char* argv[]) {
   const char* finalSingularFilename = "singularValues_final.vector";
   PreprocessEncoder(&final_compression_data0, &final_compression_data1, &final_compression_data2,
       maxIterations, finalSingularFilename);
+  */
 
+  // ADJ: change this threshold to modulate singular value damping
+  const double threshold = 0.99999; 
+  string scratchPath = "./scratch/";
+  string preadvectSingularFilename = scratchPath + string("velocity.preadvect.matrix.singularValues.vector");
+  string preadvectProcessed = preadvectSingularFilename + string(".processed");
+  if (!fileExists(preadvectProcessed)) {
+    puts("Preadvect singular values are unprocessed; processing now...");
+    printf("Threshold equals: %f\n", threshold);
+    PreprocessSingularValues(preadvectSingularFilename.c_str(), threshold);
+    puts("Done.");
+  }
+  
+  else { 
+    puts("Rewriting over previously pre-processed preadvect singular values...");
+    printf("Threshold equals: %f\n", threshold);
+    PreprocessSingularValues(preadvectSingularFilename.c_str(), threshold);
+  }
+
+  PreprocessEncoder(&preadvect_compression_data0, &preadvect_compression_data1, &preadvect_compression_data2, 
+      maxIterations, preadvectSingularFilename.c_str());
+
+  string finalSingularFilename = scratchPath + string("velocity.final.matrix.singularValues.vector");
+  string finalProcessed = finalSingularFilename + string(".processed");
+  if (!fileExists(finalProcessed)) {
+    puts("FInal singular values are unprocessed; processing now...");
+    printf("Threshold equals: %f\n", threshold);
+    PreprocessSingularValues(finalSingularFilename.c_str(), threshold);
+  }
+
+  else {
+    puts("Rewriting over previously pre-processed final singular values...");
+    printf("Threshold equals: %f\n", threshold);
+    PreprocessSingularValues(finalSingularFilename.c_str(), threshold);
+  }
+
+  PreprocessEncoder(&final_compression_data0, &final_compression_data1, &final_compression_data2,
+      maxIterations, finalSingularFilename.c_str());
 
   // write a binary file for each scalar field component
 
@@ -207,9 +247,6 @@ void PreprocessEncoder(COMPRESSION_DATA* data0, COMPRESSION_DATA* data1, COMPRES
   data1->set_maxIterations(maxIterations);
   data2->set_maxIterations(maxIterations);
   
-  // double threshold = 0.99;
-  // PreprocessSingularValues(filename, threshold);
-
   // set the singular values
   data0->set_singularValues(filename);
   data1->set_singularValues(filename);
@@ -235,9 +272,25 @@ void PreprocessSingularValues(const char* filename, double threshold)
     singularValues[i] += threshold;
   }
 
-  singularValues.write(filename);
+  string output(filename);
+  output += string(".processed");
+  singularValues.write(output.c_str());
   printf("Wrote out rescaled singular values!\n");
 }
    
 
+//////////////////////////////////////////////////////////////////////
+// check if a file exists
+//////////////////////////////////////////////////////////////////////
+bool fileExists(const string& filename)
+{
+  FILE* file;
+  file = fopen(filename.c_str(), "rb");
+  
+  if (file == NULL)
+    return false;
+
+  fclose(file);
+  return true;
+}
 
