@@ -1130,9 +1130,11 @@ void TuneGammaFastPow(const FIELD_3D& F, int blockNumber, int col,
   double lower = 0.0;
   // QUESTION: how should we define upper?
   double upper = nBits;
-  // arbitrarily set epsilon to be 0.5%
-  double epsilon = 0.005;
-  double gamma = 0.5 * (upper + lower);
+  // arbitrarily set epsilon to be very small
+  double epsilon = 0.00001;
+  // double gamma = 0.5 * (upper + lower);
+  // start from gamma = 0 to be more conservative
+  double gamma = 0.0;
   damp->toPower(gamma);
   
   // the total amount of energy in the Fourier space
@@ -1208,9 +1210,10 @@ void TuneGammaFastPowQuantized(const FIELD_3D& F, int blockNumber, int col,
   int maxIterations = data->get_maxIterations();
   double percent = data->get_percent();
 
-  VECTOR* singularValues = data->get_singularValues();
-  double maxSingularRecip = 1.0 / ((*singularValues)[0]);
-  percent *= ((*singularValues)[col] * maxSingularRecip);
+  // Singular value damping; commenting out for now.
+  // VECTOR* singularValues = data->get_singularValues();
+  // double maxSingularRecip = 1.0 / ((*singularValues)[0]);
+  // percent *= ((*singularValues)[col] * maxSingularRecip);
 
   // cache the original damping matrix
   FIELD_3D vanilla(*damp);
@@ -1624,6 +1627,8 @@ void DecodeBlockWithCompressionDataSparse(const INTEGER_FIELD_3D& intBlock,
   const double sInv = 1.0 / (*sList)(blockNumber, col);
   MatrixXd* gammaList = data->get_gammaListMatrix();
   const double gamma = (*gammaList)(blockNumber, col);
+  // DEBUG
+  // printf("Read in gamma: %f\n", gamma);
     
   // dequantize by inverting the scaling by s and contracting by the 
   // appropriate gamma-modulated damping array
@@ -1641,7 +1646,9 @@ void DecodeBlockWithCompressionDataSparse(const INTEGER_FIELD_3D& intBlock,
     for (unsigned int x = 0; x < nonZeros.size(); x++)
     {
       const int i = nonZeros[x];
-      decoded[i] *= pow(dampingArray[i],gamma) * sInv;
+      // DEBUG
+      // printf("Damping array at i: %f\n", dampingArray[i]);
+      decoded[i] *= (pow(dampingArray[i], gamma) * sInv);
     }
   }
 }
@@ -1650,7 +1657,7 @@ void DecodeBlockWithCompressionDataSparse(const INTEGER_FIELD_3D& intBlock,
 // in compression data parameter rather than decompression data 
 // due to const poisoning, compression data cannot be marked const,
 // but nonetheless it is not modified.
-// debug version, so gamma = 1.0 everywhere, and fastPow
+// debug version, so gamma = 0.0 everywhere, and fastPow
 // is bypassed.
 ////////////////////////////////////////////////////////
 void DecodeBlockWithCompressionDataSparseDebug(const INTEGER_FIELD_3D& intBlock, 
@@ -1671,18 +1678,18 @@ void DecodeBlockWithCompressionDataSparseDebug(const INTEGER_FIELD_3D& intBlock,
   // use the appropriate scale factor to decode
   MatrixXd* sList = data->get_sListMatrix();
   const double sInv = 1.0 / (*sList)(blockNumber, col);
-  MatrixXd* gammaList = data->get_gammaListMatrix();
-  const double gamma = (*gammaList)(blockNumber, col);
+  // MatrixXd* gammaList = data->get_gammaListMatrix();
+  // const double gamma = (*gammaList)(blockNumber, col);
     
   // dequantize by inverting the scaling by s and contracting by the 
   // appropriate gamma-modulated damping array
-  const FIELD_3D& dampingArray = data->get_dampingArray();
+  // const FIELD_3D& dampingArray = data->get_dampingArray();
   for (unsigned int x = 0; x < nonZeros.size(); x++)
   {
     const int i = nonZeros[x];
     // decoded[i] *= FIELD_3D::fastPow(dampingArray[i],gamma) * sInv;
-    // gamma = 1.0, so we skip taking any fastPow
-    decoded[i] *= dampingArray[i] * sInv;
+    // gamma = 0.0, so we skip taking any fastPow
+    decoded[i] *= sInv;
   }
 }
 
@@ -2481,7 +2488,7 @@ void CompressAndWriteField(const char* filename, const FIELD_3D& F, int col,
 // which is the result of an SVD coordinate transform, compresses
 // it according to the general scheme, and writes it to a binary file.
 // meant to be called in a chain so that the binary file
-// continues to grow. for debugging, gamma is set to 1.0 everywhere! 
+// continues to grow. for debugging, gamma is set to 0.0 everywhere! 
 ////////////////////////////////////////////////////////
 
 void CompressAndWriteFieldDebug(const char* filename, const FIELD_3D& F, int col,

@@ -374,18 +374,17 @@ int main(int argc, char *argv[])
   cout << "Debug: " << debug << endl;
 
 	fluid = new SUBSPACE_FLUID_3D_COMPRESSED_EIGEN(xRes, yRes, zRes, reducedPath, &boundaries[0], usingIOP);
-  fluid->loadReducedIOP(string(""));
+  // fluid->loadReducedIOP(string(""));
   // For debugging, use loadReducedIOPAll here and stepMovingDebug in runEverytime.
-  // fluid->loadReducedIOPAll(string(""));
+  fluid->loadReducedIOPAll(string(""));
   puts("finished loadReducedIOP");
+
+  fluid->initCompressionData();
+  fluid->fullRankPath() = snapshotPath;
+  fluid->vorticityEps() = vorticity;
 
   box = new BOX(boxCenter, boxLengths, period, translationPeriod);
   box->set_dt(fluid->dt());
-
-  fluid->initCompressionData();
-
-  fluid->fullRankPath() = snapshotPath;
-  fluid->vorticityEps() = vorticity;
 
   // set the FIELD_3D static
   // FIELD_3D::usingFastPow() = fastPow;
@@ -419,8 +418,9 @@ void runEverytime()
       fluid->setInitialVelocity(box);
     }
 
-    // fluid->stepMovingObstacleDebug(box);
-    fluid->stepMovingObstacle(box);
+    // Use the Debug routine with loadReducedIOPAll above
+    fluid->stepMovingObstacleDebug(box);
+    // fluid->stepMovingObstacle(box);
 
     box->translate_center();
     box->spin();
@@ -438,7 +438,7 @@ void runEverytime()
 
 
     // if (step % 10 == 0)
-    // {
+    {
       VECTOR::printVertical = false;
       // ADJ: commenting out the timingsPerFrame for now since it seems bugged
       // TIMER::printTimingsPerFrame(step);
@@ -446,7 +446,7 @@ void runEverytime()
       cout << " velocityRelative = " << VECTOR(fluid->velocityErrorRelative()) << ";" << endl;
       cout << " densityAbs = " << VECTOR(fluid->densityErrorAbs()) << ";" << endl;
       cout << " densityRelative = " << VECTOR(fluid->densityErrorRelative()) << ";" << endl;
-    // }
+    }
     
     // check if we're done
     if (step == simulationSnapshots - 1) 

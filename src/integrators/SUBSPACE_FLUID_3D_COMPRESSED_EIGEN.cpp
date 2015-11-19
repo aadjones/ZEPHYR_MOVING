@@ -188,7 +188,6 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::initOutOfCoreIOP()
     string filename;
     
     filename = _reducedPath + string("projected.ptof.matrix");
-    // EIGEN::read(filename, _preprojectToPreadvect);
     EIGEN::read(filename, _preprojectToFinal);
 
     filename = _reducedPath + string("projected.vtod.matrix");
@@ -476,7 +475,7 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::stepMovingObstacle(BOX* box)
 }
 
 //////////////////////////////////////////////////////////////////////
-// The reduced solver,  with peeled boundaries, with a moving obstacle, 
+// The reduced solver, with peeled boundaries, with a moving obstacle, 
 // with cubature enabled
 // *No reoredering of the splitting!*
 // Assumes big matrices are loaded up to do debugging comparisons!
@@ -495,10 +494,11 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::stepMovingObstacleDebug(BOX* box)
 
   // wipe boundaries
   _velocity.setZeroBorder();
+  _density.setZeroBorder();
 
   // compute the forces
-  _velocity.axpy(_dt, _force);
-  _force.clear();
+  // _velocity.axpy(_dt, _force);
+  // _force.clear();
 
   addVorticity();
   _velocity.axpy(_dt, _force);
@@ -514,24 +514,27 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::stepMovingObstacleDebug(BOX* box)
   VectorXd test_qDot = _velocity.peeledProject(_preadvectU);
 
   // project into the subspace
-  PeeledCompressedProjectTransformNoSVD(_velocity, &_U_preadvect_data, &_qDot);
+  // PeeledCompressedProjectTransformNoSVD(velocityTrue, &_U_preadvect_data, &_qDot);
   cout << "finished projection! " << endl;
   projectionTimer.stop();
 
+
   ////////////////////////////////////////////////////////////////////
   // compare
-  puts(" Projection into subspace compression error:");
-  double absoluteError = (_qDot - test_qDot).norm();
-  printf("   Absolute error: %f\n", absoluteError);
-  double relativeError = absoluteError / (_qDot.norm());
-  printf("   Relative error: %f\n", relativeError);
-  cout << " qDot: " << endl;
-  cout << _qDot << endl;
-  cout << " no compression qDot: " << endl;
-  cout << test_qDot << endl;
+  // puts(" Projection into subspace compression error:");
+  // double absoluteError = (_qDot - test_qDot).norm();
+  // printf("   Absolute error: %f\n", absoluteError);
+  // double relativeError = absoluteError / (_qDot.norm());
+  // printf("   Relative error: %f\n", relativeError);
+  // cout << " compressed qDot: " << endl;
+  // cout << _qDot << endl;
+  // cout << " no compression qDot: " << endl;
+  // cout << test_qDot << endl;
+
+  // DEBUG
+  _qDot = test_qDot;
 
   // then advect
-
   // grab the preadvected values of _velocity and _density
   VECTOR3_FIELD_3D preadvectVelocity = _velocity;
   FIELD_3D preadvectDensity = _density;
@@ -566,10 +569,11 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::stepMovingObstacleDebug(BOX* box)
 
   // reduced advect velocity
 
-  cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
-  reducedAdvectCompressionFriendly();
-  cout << "finished compression-friendly advection!" << endl;
-  cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+  // DEBUG
+  reducedAdvectStagedStamFast();
+
+  // reducedAdvectCompressionFriendly();
+  // cout << "finished compression-friendly advection!" << endl;
   
   // cout << " post advection qDot: " << _qDot << endl;
   // exit(0);
@@ -655,7 +659,8 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::stepMovingObstacleDebug(BOX* box)
   velocityTrue = _velocity;
 
   TIMER unprojectionTimer("Velocity unprojection");
-  PeeledCompressedUnprojectTransform(&_U_final_data, _qDot, &_velocity);
+  // DEBUG
+  // PeeledCompressedUnprojectTransform(&_U_final_data, _qDot, &_velocity);
   unprojectionTimer.stop();
 
   ////////////////////////////////////////////////////////////////////
@@ -1032,28 +1037,36 @@ VectorXd SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::advectCellStamPeeled(MATRIX_COMPRES
 
   TIMER multiplyTimer0("multiplyTimer0");
 
-  GetSubmatrixNoSVD(i000, &U_data, submatrix);
+  GetSubmatrixNoSVDSparse(i000, &U_data, submatrix);
+  //GetSubmatrixNoSVD(i000, &U_data, submatrix);
   const VectorXd v000 = (*submatrix) * qDot;
 
-  GetSubmatrixNoSVD(i010, &U_data, submatrix);
+  GetSubmatrixNoSVDSparse(i010, &U_data, submatrix);
+  //GetSubmatrixNoSVD(i010, &U_data, submatrix);
   const VectorXd v010 = (*submatrix) * qDot;
 
-  GetSubmatrixNoSVD(i100, &U_data, submatrix);
+  GetSubmatrixNoSVDSparse(i100, &U_data, submatrix);
+  //GetSubmatrixNoSVD(i100, &U_data, submatrix);
   const VectorXd v100 = (*submatrix) * qDot;
 
-  GetSubmatrixNoSVD(i110, &U_data, submatrix);
+  GetSubmatrixNoSVDSparse(i110, &U_data, submatrix);
+  //GetSubmatrixNoSVD(i110, &U_data, submatrix);
   const VectorXd v110 = (*submatrix) * qDot;
 
-  GetSubmatrixNoSVD(i001, &U_data, submatrix);
+  GetSubmatrixNoSVDSparse(i001, &U_data, submatrix);
+  //GetSubmatrixNoSVD(i001, &U_data, submatrix);
   const VectorXd v001 = (*submatrix) * qDot;
 
-  GetSubmatrixNoSVD(i011, &U_data, submatrix);
+  GetSubmatrixNoSVDSparse(i011, &U_data, submatrix);
+  //GetSubmatrixNoSVD(i011, &U_data, submatrix);
   const VectorXd v011 = (*submatrix) * qDot;
 
-  GetSubmatrixNoSVD(i101, &U_data, submatrix);
+  GetSubmatrixNoSVDSparse(i101, &U_data, submatrix);
+  //GetSubmatrixNoSVD(i101, &U_data, submatrix);
   const VectorXd v101 = (*submatrix) * qDot;
 
-  GetSubmatrixNoSVD(i111, &U_data, submatrix);
+  GetSubmatrixNoSVDSparse(i111, &U_data, submatrix);
+  //GetSubmatrixNoSVD(i111, &U_data, submatrix);
   const VectorXd v111 = (*submatrix) * qDot;
 
   multiplyTimer0.stop();
@@ -1233,6 +1246,7 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::readAdvectionCubature()
 void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::reducedAdvectStagedStamFast()
 {
   TIMER functionTimer(__FUNCTION__);
+  puts("Calling reduced advect staged stam fast from COMPRESSED!");
   VectorXd final(_advectionCubatureAfter[0].rows());
   final.setZero();
   const Real dt0 = _dt / _dx;
@@ -1597,6 +1611,10 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedIOP(string path)
   _U_preadvect_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
       &compression_data0, &compression_data1, &compression_data2); 
 
+  // DEBUG
+  // _U_preadvect_data.init_cache();
+  // _U_preadvect_data.dct_setup(-1);
+
   COMPRESSION_DATA final_compression_data0;
   COMPRESSION_DATA final_compression_data1;
   COMPRESSION_DATA final_compression_data2;
@@ -1611,6 +1629,10 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedIOP(string path)
 
   _U_final_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
       &final_compression_data0, &final_compression_data1, &final_compression_data2); 
+
+  // DEBUG
+  // _U_final_data.init_cache();
+  // _U_final_data.dct_setup(-1);
 
   TIMER::printTimings();
 }
@@ -2105,10 +2127,10 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::diffTruth(const VECTOR3_FIELD_3D& testV
   cout << " velocity abs error:      " << _velocityErrorAbs.back() << endl;
   cout << " velocity relative error: " << _velocityErrorRelative.back() << endl;
 
-  diff = testDensity.peelBoundary().flattenedEigen() - _density.peelBoundary().flattenedEigen();
-  _densityErrorAbs.push_back(diff.norm());
-  _densityErrorRelative.push_back(diff.norm() / _density.peelBoundary().flattened().norm2());
-  cout << " density abs error:      " << _densityErrorAbs.back() << endl;
-  cout << " density relative error: " << _densityErrorRelative.back() << endl;
+  // diff = testDensity.peelBoundary().flattenedEigen() - _density.peelBoundary().flattenedEigen();
+  // _densityErrorAbs.push_back(diff.norm());
+  // _densityErrorRelative.push_back(diff.norm() / _density.peelBoundary().flattened().norm2());
+  // cout << " density abs error:      " << _densityErrorAbs.back() << endl;
+  // cout << " density relative error: " << _densityErrorRelative.back() << endl;
 }
 
