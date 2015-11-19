@@ -367,16 +367,16 @@ int main(int argc, char *argv[])
   bool usingIOP = parser.getBool("iop", 0);
   cout << "Using IOP: " << usingIOP << endl;
 
-  // bool fastPow = parser.getBool("fast pow", false);
-  // cout << " Fast pow: " << fastPow << endl;
+  bool fastPow = parser.getBool("fastPow", false);
+  cout << " Fast pow: " << fastPow << endl;
 
   bool debug = parser.getBool("debug", 0);
   cout << "Debug: " << debug << endl;
 
 	fluid = new SUBSPACE_FLUID_3D_COMPRESSED_EIGEN(xRes, yRes, zRes, reducedPath, &boundaries[0], usingIOP);
-  // fluid->loadReducedIOP(string(""));
+  fluid->loadReducedIOP(string(""));
   // For debugging, use loadReducedIOPAll here and stepMovingDebug in runEverytime.
-  fluid->loadReducedIOPAll(string(""));
+  // fluid->loadReducedIOPAll(string(""));
   puts("finished loadReducedIOP");
 
   fluid->initCompressionData();
@@ -387,7 +387,7 @@ int main(int argc, char *argv[])
   box->set_dt(fluid->dt());
 
   // set the FIELD_3D static
-  // FIELD_3D::usingFastPow() = fastPow;
+  FIELD_3D::usingFastPow() = fastPow;
   
   // ground = new FLUID_3D_MIC(xRes, yRes, zRes, 0);
  
@@ -419,8 +419,8 @@ void runEverytime()
     }
 
     // Use the Debug routine with loadReducedIOPAll above
-    fluid->stepMovingObstacleDebug(box);
-    // fluid->stepMovingObstacle(box);
+    // fluid->stepMovingObstacleDebug(box);
+    fluid->stepMovingObstacle(box);
 
     box->translate_center();
     box->spin();

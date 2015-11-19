@@ -33,7 +33,7 @@
 # ADJ: additional ignores
 
 # anything ending in ~ from Vim
-*.*~
+*~
 
 # Mac-specific
 .DS_Store
@@ -42,4 +42,3 @@
 bin/
 data/
 tags
-*.mov

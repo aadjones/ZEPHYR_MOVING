@@ -99,12 +99,12 @@ int main(int argc, char* argv[]) {
   cout << " percent: " << percent << endl;
   int maxIterations = parser.getInt("maxIterations", 32);
   cout << " maxIterations: " << maxIterations << endl;
-  int debug = parser.getBool("debug", false);
+  bool debug = parser.getBool("debug", false);
   cout << "debug: " << debug << endl;
 
-  // int usingFastPow = parser.getBool("fast pow", false);
-  // cout << " fast pow: " << usingFastPow << endl;
-  // FIELD_3D::usingFastPow() = usingFastPow;
+  bool usingFastPow = parser.getBool("fastPow", false);
+  cout << " fastPow: " << usingFastPow << endl;
+  FIELD_3D::usingFastPow() = usingFastPow;
 
   string preAdvectPath = reducedPath + string("U.preadvect.matrix");
   string finalPath = reducedPath + string("U.final.matrix");
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
   */
 
   // ADJ: change this threshold to modulate singular value damping
-  const double threshold = 0.99999; 
+  const double threshold = 1.0; 
   string scratchPath = "./scratch/";
   string preadvectSingularFilename = scratchPath + string("velocity.preadvect.matrix.singularValues.vector");
   string preadvectProcessed = preadvectSingularFilename + string(".processed");
@@ -248,9 +248,13 @@ void PreprocessEncoder(COMPRESSION_DATA* data0, COMPRESSION_DATA* data1, COMPRES
   data2->set_maxIterations(maxIterations);
   
   // set the singular values
+  // DEBUG: let's leave this out for now.
+  
+  /*
   data0->set_singularValues(filename);
   data1->set_singularValues(filename);
   data2->set_singularValues(filename);
+  */
 }
 
 void PreprocessSingularValues(const char* filename, double threshold)

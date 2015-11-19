@@ -31,7 +31,6 @@ class COMPRESSION_DATA {
     double get_percent() const { return _percent; }
     int get_nBits() const { return _nBits; } 
     int get_maxIterations() const { return _maxIterations; } 
-    bool get_debug() const { return _debug; }
     const VectorXi& get_blockLengths() const { return _blockLengths; }
     const VectorXi& get_blockIndices() const { return _blockIndices; }
     
@@ -49,11 +48,7 @@ class COMPRESSION_DATA {
     vector<Vector3d>* get_singularList() { return &(_singularList); }
     vector<Matrix3d>* get_vList() { return &(_vList); }
     
-    VECTOR* get_singularValues() { return &(_singularValues); }
-
     const FIELD_3D& get_dampingArray() const { return _dampingArray; }
-    vector<FIELD_3D>* get_dampingArrayList() { return &(_dampingArrayList); }
-    bool get_arrayListBuilt() const { return _arrayListBuilt; }
     const INTEGER_FIELD_3D& get_zigzagArray() const { return _zigzagArray; }
     const INTEGER_FIELD_3D& get_reverseZigzag() const { return _reverseZigzag; }
     double* get_dct_in() const { return _dct_in; }
@@ -69,7 +64,6 @@ class COMPRESSION_DATA {
     void set_percent(double percent) { _percent = percent; }
     void set_nBits(int nBits) { _nBits = nBits; }
     void set_maxIterations(int maxIterations) { _maxIterations = maxIterations; }
-    void set_debug(bool debug) { _debug = debug; }
 
     void set_blockLengths(const VectorXi& blockLengths) { 
       int length = blockLengths.size();
@@ -112,26 +106,7 @@ class COMPRESSION_DATA {
         }
       }
       _dampingArray = damp;
-      _arrayListBuilt = true;
     }
-  
-  void set_dampingArrayList() {
-    // choose the number of different discrete gamma values to clamp to
-    // approximately nBits (32) * 4 is a first test
-    int numGammas = 129; 
-    _dampingArrayList.resize(numGammas);
-    for (int i = 0; i < numGammas; i++) {
-      _dampingArrayList[i] = _dampingArray;
-      double pow = i / 4.0;
-      _dampingArrayList[i].toPower(pow);
-    }
-  }
-
-  // read in the singular values from a binary file
-  void set_singularValues(const char* filename) {
-    _singularValues.read(filename);
-  }
-
 
     
   void set_zigzagArray() {
@@ -163,14 +138,11 @@ class COMPRESSION_DATA {
       _reverseZigzag[zigzagArray[x]] = x;
   }
 
-  void set_planType(int planType) { _planType = planType; }
 
   void dct_setup(int direction) {
     const int xRes = BLOCK_SIZE;
     const int yRes = BLOCK_SIZE;
     const int zRes = BLOCK_SIZE;
-
-    cout << "Using block size: " << BLOCK_SIZE << endl;
 
     _dct_in = (double*) fftw_malloc(xRes * yRes * zRes * sizeof(double));
     _dct_out = (double*) fftw_malloc(xRes * yRes * zRes * sizeof(double));
@@ -184,116 +156,6 @@ class COMPRESSION_DATA {
        _dct_plan = fftw_plan_r2r_3d(zRes, yRes, xRes, _dct_in, _dct_out, 
     FFTW_REDFT01, FFTW_REDFT01, FFTW_REDFT01, FFTW_MEASURE);
     }
-  }
-  
-  // more general dct/dst transform initialization, using 'planType'
-  void transform_setup(int direction) {
-    const int xRes = BLOCK_SIZE;
-    const int yRes = BLOCK_SIZE;
-    const int zRes = BLOCK_SIZE;
-
-    cout << "Using block size: " << BLOCK_SIZE << endl;
-
-    _dct_in = (double*) fftw_malloc(xRes * yRes * zRes * sizeof(double));
-    _dct_out = (double*) fftw_malloc(xRes * yRes * zRes * sizeof(double));
-    fftw_r2r_kind kind_x, kind_y, kind_z;
-    if (direction == 1) { // forward transform
-      switch (_planType) {
-        case 0 : 
-          // REDFT10 stands for real even dft (of type 2), corresponding to DCT 
-          // RODFT10 stands for real odd dft (of type 2), corresponding to DST
-          kind_x = FFTW_REDFT10;
-          kind_y = FFTW_REDFT10;
-          kind_z = FFTW_REDFT10;
-          break;
-        case 1 : 
-          kind_x = FFTW_REDFT10;
-          kind_y = FFTW_REDFT10;
-          kind_z = FFTW_RODFT10;
-          break;
-        case 2 :
-          kind_x = FFTW_REDFT10;
-          kind_y = FFTW_RODFT10;
-          kind_z = FFTW_REDFT10;
-          break;
-        case 3 :
-          kind_x = FFTW_REDFT10;
-          kind_y = FFTW_RODFT10;
-          kind_z = FFTW_RODFT10;
-          break;
-        case 4 :
-          kind_x = FFTW_RODFT10;
-          kind_y = FFTW_REDFT10;
-          kind_z = FFTW_REDFT10;
-          break;
-        case 5 :
-          kind_x = FFTW_RODFT10;
-          kind_y = FFTW_REDFT10;
-          kind_z = FFTW_RODFT10;
-          break;
-        case 6 :
-          kind_x = FFTW_RODFT10;
-          kind_y = FFTW_RODFT10;
-          kind_z = FFTW_REDFT10;
-          break;
-        case 7 :
-          kind_x = FFTW_RODFT10;
-          kind_y = FFTW_RODFT10;
-          kind_z = FFTW_RODFT10;
-          break;
-        default :
-          printf("Invalid plan type (must be integer from 0-7 inclusive)\n");
-      }
-    }
-  else { // inverse transforms
-   switch (_planType) {
-      case 0 : 
-        kind_x = FFTW_REDFT01;
-        kind_y = FFTW_REDFT01;
-        kind_z = FFTW_REDFT01;
-        break;
-      case 1 : 
-        kind_x = FFTW_REDFT01;
-        kind_y = FFTW_REDFT01;
-        kind_z = FFTW_RODFT01;
-        break;
-      case 2 :
-        kind_x = FFTW_REDFT01;
-        kind_y = FFTW_RODFT01;
-        kind_z = FFTW_REDFT01;
-        break;
-      case 3 :
-        kind_x = FFTW_REDFT01;
-        kind_y = FFTW_RODFT01;
-        kind_z = FFTW_RODFT01;
-        break;
-      case 4 :
-        kind_x = FFTW_RODFT01;
-        kind_y = FFTW_REDFT01;
-        kind_z = FFTW_REDFT01;
-        break;
-      case 5 :
-        kind_x = FFTW_RODFT01;
-        kind_y = FFTW_REDFT01;
-        kind_z = FFTW_RODFT01;
-        break;
-      case 6 :
-        kind_x = FFTW_RODFT01;
-        kind_y = FFTW_RODFT01;
-        kind_z = FFTW_REDFT01;
-        break;
-      case 7 :
-        kind_x = FFTW_RODFT01;
-        kind_y = FFTW_RODFT01;
-        kind_z = FFTW_RODFT01;
-        break;
-      default :
-        printf("Invalid plan type (must be integer from 0-7 inclusive)\n");
-    }
-  }
-  // 'in' appears twice since it is in-place
-  // r2r means 'real-to-real'
-  _dct_plan = fftw_plan_r2r_3d(zRes, yRes, xRes, _dct_in, _dct_out, kind_z, kind_y, kind_x, FFTW_MEASURE);
   }
 
  void dct_cleanup() {
@@ -310,7 +172,6 @@ class COMPRESSION_DATA {
     int _numBlocks;
     int _currBlockNum;
     int _maxIterations;
-    bool _debug;
     double _nBits;
     double _percent;
 
@@ -326,17 +187,13 @@ class COMPRESSION_DATA {
 
     vector<Matrix3d> _vList;
     vector<Vector3d> _singularList;
-    VECTOR _singularValues;
 
     FIELD_3D _dampingArray;
     INTEGER_FIELD_3D _zigzagArray;
     INTEGER_FIELD_3D _reverseZigzag;
-    
-    vector<FIELD_3D> _dampingArrayList;
-    bool _arrayListBuilt;
+
     double* _dct_in;
     double* _dct_out;
-    int _planType;
     fftw_plan _dct_plan;
 };
 
