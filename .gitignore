@@ -41,4 +41,7 @@
 # ZEPHYR-specific ignores
 bin/
 data/
+movies/
+scratch/
 tags
+*.txt
