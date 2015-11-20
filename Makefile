@@ -2,7 +2,7 @@ SHELL := /bin/bash -e
 
 BINS = fluidMoving3D svdOutOfCoreMultiple cubatureGeneratorStamStaged reducedMoving3D compressMatrices buildProducts reducedCompressedMoving3D
 
-SRCS = geometry linearalgebra integrators util glvu cubature 
+SRCS = geometry linearalgebra integrators util glvu cubature compression
 
 all : 
 	-for d in $(BINS); do (echo -e "\n==== Entering $$d ====\n";cd ./projects/$$d; make -f Makefile;cd ../..); done
