@@ -184,6 +184,10 @@ void TuneGamma(const FIELD_3D& F, int blockNumber, int col, COMPRESSION_DATA* da
 void TuneGammaFastPow(const FIELD_3D& F, int blockNumber, int col, COMPRESSION_DATA* data,
     FIELD_3D* damp);
 
+// quantizes the gamma values to quarter-integers
+void TuneGammaQuantized(const FIELD_3D& F, int blockNumber, int col, COMPRESSION_DATA* data,
+    FIELD_3D* damp);
+
 // simply sets gamma equal to zero for no damping. for
 // debug purposes only.
 void TuneGammaDebug(const FIELD_3D& F, int blockNumber, int col,
@@ -223,6 +227,8 @@ void DecodeBlockWithCompressionData(const INTEGER_FIELD_3D& intBlock,
 void DecodeBlockWithCompressionDataSparse(const INTEGER_FIELD_3D& intBlock,
   int blockNumber, int col, COMPRESSION_DATA* data, Real* decoded, const NONZERO_ENTRIES& nonZeros);
 void DecodeBlockWithCompressionDataSparseStackless();
+void DecodeBlockWithCompressionDataSparseQuantized(const INTEGER_FIELD_3D& intBlock,
+  int blockNumber, int col, COMPRESSION_DATA* data, Real* decoded, const NONZERO_ENTRIES& nonZeros);
 
 // flattens an INTEGER_FIELD_3D through a zig-zag scan
 // into a VectorXi. Since the scan always follows the same order,

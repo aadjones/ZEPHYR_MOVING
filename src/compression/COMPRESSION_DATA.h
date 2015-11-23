@@ -19,7 +19,10 @@ class COMPRESSION_DATA {
   public:
     COMPRESSION_DATA();
     COMPRESSION_DATA(const VEC3I& dims, int numCols, int nBits, double percent);
-    ~COMPRESSION_DATA();
+    //COMPRESSION_DATA(COMPRESSION_DATA& data);
+    //~COMPRESSION_DATA();
+
+    //COMPRESSION_DATA& operator=(COMPRESSION_DATA& data);
 
 
     // getters
@@ -54,6 +57,18 @@ class COMPRESSION_DATA {
     double* get_dct_in() const { return _dct_in; }
     double* get_dct_out() const { return _dct_out; }
     fftw_plan get_dct_plan() const { return _dct_plan; }
+
+    bool get_arrayListBuilt() const { return _dampingArrayListBuilt; }
+
+    
+    const vector<FIELD_3D>& get_dampingArrayList() const { 
+      //cout << "_dampingArray size: " << _dampingArrayList.size() << endl;
+      //cout << "_dampingArrayListBuilt: " << _dampingArrayListBuilt << endl;
+      //cout << "_dampingArray size: " << _dampingArrayList.size() << endl;
+      //cout << "_dampingArrayList @ 0: " << _dampingArrayList[0].flattened() << endl;
+      //assert (_dampingArrayListBuilt);
+      return _dampingArrayList; 
+      }
 
     // setters
     void set_dims(const VEC3I& dims) { _dims = dims; }
@@ -106,9 +121,43 @@ class COMPRESSION_DATA {
         }
       }
       _dampingArray = damp;
+      _dampingArrayBuilt = true;
     }
 
-    
+  
+  void set_dampingArrayList() {
+    TIMER functionTimer(__FUNCTION__);
+    //cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+    assert(_dampingArrayBuilt);
+    //cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+    //cout << "original damping array built: " << _dampingArrayBuilt << endl;
+    //if (_dampingArrayList.size() > 0) { return; }
+    if (_dampingArrayListBuilt) { return; }
+    //cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+
+    // DEBUG
+    puts("Inside set_dampingArrayList!");
+
+    FIELD_3D dampingArray(_dampingArray);
+    // precompute different damping arrays for various gammas
+    // gamma is quantized to be a quarter-integer between 0 and nBits
+    // so there are 4*nBits + 1 arrays that must be computed--typically, 129.
+    int totalNumber = 4 * _nBits + 1;
+    _dampingArrayList.resize(totalNumber);
+    cout << "total number: " << totalNumber << endl;
+    for (int i = 0; i < totalNumber; i++) {
+      double gamma = i / 4.0;
+      dampingArray.toFastPower(gamma);
+      _dampingArrayList[i] = dampingArray;
+
+      // reset to the vanilla damping array before the next pass through the loop
+      dampingArray = _dampingArray;
+    }
+    _dampingArrayListBuilt = true;
+    cout << "array list built: " << _dampingArrayListBuilt << endl;
+  }
+ 
+
   void set_zigzagArray() {
     TIMER functionTimer(__FUNCTION__);
 
@@ -162,6 +211,8 @@ class COMPRESSION_DATA {
    fftw_destroy_plan(_dct_plan);
    fftw_free(_dct_in);
    fftw_free(_dct_out);
+   _dct_in = NULL;
+   _dct_out = NULL;
    fftw_cleanup();
  }
 
@@ -175,6 +226,9 @@ class COMPRESSION_DATA {
     double _nBits;
     double _percent;
 
+    bool _dampingArrayBuilt=false;
+    bool _dampingArrayListBuilt=false;
+
     VectorXi _blockLengths;
     VectorXi _blockIndices;
     VectorXd _sList;
@@ -187,6 +241,7 @@ class COMPRESSION_DATA {
 
     vector<Matrix3d> _vList;
     vector<Vector3d> _singularList;
+    vector<FIELD_3D> _dampingArrayList;
 
     FIELD_3D _dampingArray;
     INTEGER_FIELD_3D _zigzagArray;

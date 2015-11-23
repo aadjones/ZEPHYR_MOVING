@@ -69,7 +69,10 @@ VECTOR::VECTOR(const vector<Real>& v)
 
 VECTOR::~VECTOR()
 {
-  if (_vector) free(_vector);
+  if (_vector) {
+    free(_vector);
+    _vector = NULL;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////

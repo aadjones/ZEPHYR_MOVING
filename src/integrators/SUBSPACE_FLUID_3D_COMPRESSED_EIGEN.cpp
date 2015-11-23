@@ -514,25 +514,25 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::stepMovingObstacleDebug(BOX* box)
   VectorXd test_qDot = _velocity.peeledProject(_preadvectU);
 
   // project into the subspace
-  // PeeledCompressedProjectTransformNoSVD(velocityTrue, &_U_preadvect_data, &_qDot);
+  PeeledCompressedProjectTransformNoSVD(velocityTrue, &_U_preadvect_data, &_qDot);
   cout << "finished projection! " << endl;
   projectionTimer.stop();
 
 
   ////////////////////////////////////////////////////////////////////
   // compare
-  // puts(" Projection into subspace compression error:");
-  // double absoluteError = (_qDot - test_qDot).norm();
-  // printf("   Absolute error: %f\n", absoluteError);
-  // double relativeError = absoluteError / (_qDot.norm());
-  // printf("   Relative error: %f\n", relativeError);
-  // cout << " compressed qDot: " << endl;
-  // cout << _qDot << endl;
-  // cout << " no compression qDot: " << endl;
-  // cout << test_qDot << endl;
+  puts(" Projection into subspace compression error:");
+  double absoluteError = (_qDot - test_qDot).norm();
+  printf("   Absolute error: %f\n", absoluteError);
+  double relativeError = absoluteError / (_qDot.norm());
+  printf("   Relative error: %f\n", relativeError);
+  cout << " compressed qDot: " << endl;
+  cout << _qDot << endl;
+  cout << " no compression qDot: " << endl;
+  cout << test_qDot << endl;
 
   // DEBUG
-  _qDot = test_qDot;
+  // _qDot = test_qDot;
 
   // then advect
   // grab the preadvected values of _velocity and _density
@@ -1182,6 +1182,7 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::readAdvectionCubature()
 
     _U_preadvect_data.dct_setup(-1);
     _U_preadvect_data.init_cache();
+    _U_preadvect_data.set_dampingArrayLists();
 
     // EIGEN::read(preadvectFile, _preadvectU);
     //
@@ -1464,8 +1465,10 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::initCompressionData()
 {
   _U_final_data.dct_setup(-1);
   _U_final_data.init_cache();
+  _U_final_data.set_dampingArrayLists();
   _U_preadvect_data.dct_setup(-1);
   _U_preadvect_data.init_cache();
+  _U_preadvect_data.set_dampingArrayLists();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1497,6 +1500,7 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadCubatureTrainingBases()
 
   _U_preadvect_data.dct_setup(-1);
   _U_preadvect_data.init_cache();
+  _U_preadvect_data.set_dampingArrayLists();
 
   // EIGEN::read(filename, _preadvectU);
 
@@ -1537,6 +1541,7 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedRuntimeBases(string path)
 
   _U_preadvect_data.dct_setup(-1);
   _U_preadvect_data.init_cache();
+  _U_preadvect_data.set_dampingArrayLists();
 
 
   COMPRESSION_DATA* preadvect_dataX = _U_preadvect_data.get_compression_dataX();
@@ -1569,6 +1574,7 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedRuntimeBases(string path)
 
   _U_final_data.dct_setup(-1);
   _U_final_data.init_cache();
+  _U_final_data.set_dampingArrayLists();
 
   // EIGEN::read(filename, _U);
   
@@ -1614,6 +1620,7 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedIOP(string path)
   // DEBUG
   // _U_preadvect_data.init_cache();
   // _U_preadvect_data.dct_setup(-1);
+  _U_preadvect_data.set_dampingArrayLists();
 
   COMPRESSION_DATA final_compression_data0;
   COMPRESSION_DATA final_compression_data1;
@@ -1633,6 +1640,7 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedIOP(string path)
   // DEBUG
   // _U_final_data.init_cache();
   // _U_final_data.dct_setup(-1);
+  _U_final_data.set_dampingArrayLists();
 
   TIMER::printTimings();
 }

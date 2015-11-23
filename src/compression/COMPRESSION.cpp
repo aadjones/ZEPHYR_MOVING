@@ -982,9 +982,10 @@ void TuneGammaFastPow(const FIELD_3D& F, int blockNumber, int col,
   double lower = 0.0;
   // QUESTION: how should we define upper?
   double upper = nBits;
-  // arbitrarily set epsilon to be 0.5%
-  double epsilon = 0.005;
-  double gamma = 0.5 * (upper + lower);
+  // arbitrarily set epsilon to be very small
+  double epsilon = 0.0001;
+  // double gamma = 0.5 * (upper + lower);
+  double gamma = 0.0;
   damp->toFastPower(gamma);
 
   // the total amount of energy in the Fourier space
@@ -1002,9 +1003,6 @@ void TuneGammaFastPow(const FIELD_3D& F, int blockNumber, int col,
       upper = gamma;
       gamma = 0.5 * (upper + lower);
 
-      // to the power of 1 / upper brings it back to the vanilla state,
-      // from which we raise it to the new gamma
-      //damp->toPower(gamma / upper);
       (*damp) = vanilla;
       damp->toFastPower(gamma);
     }
@@ -1013,9 +1011,6 @@ void TuneGammaFastPow(const FIELD_3D& F, int blockNumber, int col,
       lower = gamma;
       gamma = 0.5 * (upper + lower);
 
-      // to the power of 1 / lower brings it back to the vanilla state,
-      // from which we raise it to the new gamma
-      //damp->toPower(gamma / lower);
       (*damp) = vanilla;
       damp->toFastPower(gamma);
     }
@@ -1043,6 +1038,88 @@ void TuneGammaFastPow(const FIELD_3D& F, int blockNumber, int col,
 
 }
 
+////////////////////////////////////////////////////////
+// Binary search to find the appropriate gamma given
+// desired percent threshold within maxIterations.
+// Quantizes gamma values to quarter-integers in the range
+// 0 to nBits.
+///////////////////////////////////////////////////////
+void TuneGammaQuantized(const FIELD_3D& F, int blockNumber, int col,
+    COMPRESSION_DATA* data, FIELD_3D* damp)
+{
+  TIMER functionTimer(__FUNCTION__);
+
+  // fetch parameters from data
+  int nBits = data->get_nBits();
+  int maxIterations = data->get_maxIterations();
+  double percent = data->get_percent();
+
+  // cache the original damping matrix
+  FIELD_3D vanilla(*damp);
+
+  double lower = 0.0;
+  // QUESTION: how should we define upper?
+  double upper = nBits;
+  // arbitrarily set epsilon to be very small
+  double epsilon = 0.0001;
+  // double gamma = 0.5 * (upper + lower);
+  double gamma = 0.0;
+  damp->toFastPower(gamma);
+
+  // the total amount of energy in the Fourier space
+  double totalEnergy = F.sumSq();
+  FIELD_3D damped = ( F / (*damp) );
+  damped.roundInt();
+
+  double energyDiff = abs(totalEnergy - ( (*damp) * damped ).sumSq());
+  double percentEnergy = 1.0 - (energyDiff / totalEnergy);
+  int iterations = 0;
+
+  while ( abs( percent - percentEnergy ) > epsilon && iterations < maxIterations) {
+
+    if (percentEnergy < percent) { // too much damping; need to lower gamma
+      upper = gamma;
+      gamma = 0.5 * (upper + lower);
+
+      (*damp) = vanilla;
+      damp->toFastPower(gamma);
+    }
+
+    else { // not enough damping; need to increase gamma
+      lower = gamma;
+      gamma = 0.5 * (upper + lower);
+
+      (*damp) = vanilla;
+      damp->toFastPower(gamma);
+    }
+
+    // update percentEnergy
+    damped = ( F / (*damp) );
+    damped.roundInt();
+    energyDiff = abs(totalEnergy - ( (*damp) * damped ).sumSq());
+    percentEnergy =  1.0 - (energyDiff / totalEnergy);
+    iterations++;
+  }
+
+  // fetch data to update gammaList
+  MatrixXd* gammaListMatrix = data->get_gammaListMatrix();
+  int numBlocks = data->get_numBlocks();
+  int numCols = data->get_numCols();
+
+  // if it's the first time TuneGamma is called in a chain, resize
+  if (gammaListMatrix->cols() <= 0) {
+    gammaListMatrix->setZero(numBlocks, numCols);
+  }
+
+  // quantize gamma to the nearest quarter-integer
+  gamma = rint(4 * gamma) / 4.0;
+  (*gammaListMatrix)(blockNumber, col) = gamma;
+
+  // re-compute damp in case gamma changed
+  (*damp) = vanilla;
+  damp->toFastPower(gamma);
+
+}
 ////////////////////////////////////////////////////////
 // simply sets gamma equal to zero for no damping. for
 // debug purposes only.
@@ -1097,10 +1174,14 @@ void EncodeBlock(const FIELD_3D& F, int blockNumber, int col, COMPRESSION_DATA* 
 
   // finds best gamma given the percent. updates gammaList
   // and updates damp
-  if (FIELD_3D::usingFastPow())
-    TuneGammaFastPow(F, blockNumber, col, data, &damp);
-  else
+  if (FIELD_3D::usingFastPow()) {
+    // ADJ: switching to quantized gamma!
+    //TuneGammaFastPow(F, blockNumber, col, data, &damp);
+    TuneGammaQuantized(F, blockNumber, col, data, &damp);
+  }
+  else {
     TuneGamma(F, blockNumber, col, data, &damp);
+  }
 
   // fill the return value with rounded damped entries
   RoundFieldToInt( (F / damp), quantized );
@@ -1298,6 +1379,8 @@ void DecodeBlockWithCompressionDataSparse(const INTEGER_FIELD_3D& intBlock,
   int blockNumber, int col, COMPRESSION_DATA* data, Real* decoded, const NONZERO_ENTRIES& nonZeros)
 {
   TIMER functionTimer(__FUNCTION__);
+  // DEBUG
+  puts("Called the non-quantized decode block!");
 
   int numBlocks = data->get_numBlocks();
   // make sure we are not accessing an invalid block
@@ -1322,6 +1405,55 @@ void DecodeBlockWithCompressionDataSparse(const INTEGER_FIELD_3D& intBlock,
   {
     const int i = nonZeros[x];
     decoded[i] *= FIELD_3D::fastPow(dampingArray[i],gamma) * sInv;
+  }
+}
+
+////////////////////////////////////////////////////////
+// does the same operations as DecodeBlock, but with a passed
+// in compression data parameter rather than decompression data
+// due to const poisoning, compression data cannot be marked const,
+// but nonetheless it is not modified.
+// assumes we have encoded using TuneGammaQuantized!
+////////////////////////////////////////////////////////
+void DecodeBlockWithCompressionDataSparseQuantized(const INTEGER_FIELD_3D& intBlock,
+  int blockNumber, int col, COMPRESSION_DATA* data, Real* decoded, const NONZERO_ENTRIES& nonZeros)
+{
+  TIMER functionTimer(__FUNCTION__);
+
+  int numBlocks = data->get_numBlocks();
+  // make sure we are not accessing an invalid block
+  assert( (blockNumber >= 0) && (blockNumber < numBlocks) );
+
+  CastIntFieldToDouble(intBlock, intBlock.totalCells(), decoded, nonZeros);
+
+  // use the appropriate scale factor to decode
+  MatrixXd* sList = data->get_sListMatrix();
+  const double sInv = 1.0 / (*sList)(blockNumber, col);
+  MatrixXd* gammaList = data->get_gammaListMatrix();
+  const double gamma = (*gammaList)(blockNumber, col);
+
+  // dequantize by inverting the scaling by s and contracting by the
+  // appropriate gamma-modulated damping array
+  //const FIELD_3D& dampingArray = data->get_dampingArray();
+  bool arrayListBuilt = data->get_arrayListBuilt();
+  //cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+  //cout << "array list built is: " << arrayListBuilt << endl;
+  //if (!arrayListBuilt) { 
+    //puts("Have to rebuild array list...");
+    //cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+    data->set_dampingArrayList(); 
+    //cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " : " << endl;
+  //}
+  const vector<FIELD_3D>& dampingArrayList = data->get_dampingArrayList();
+
+  // gamma is a quarter-integer, so rescaling gives the appropriate index 
+  // in the list
+  int index = 4 * gamma;
+  for (unsigned int x = 0; x < nonZeros.size(); x++)
+  {
+    const int i = nonZeros[x];
+    //decoded[i] *= FIELD_3D::fastPow(dampingArray[i],gamma) * sInv;
+    decoded[i] *= dampingArrayList[index][i] * sInv;
   }
 }
 
@@ -1791,6 +1923,10 @@ int* ReadBinaryFileToMemory(const char* filename,
     fread(&nBits, 1, sizeof(int), pFile);
     data->set_nBits(nBits);
     // cout << "nBits: " << nBits << endl;
+
+    // set the damping list array 
+    // must be done *after* reading in nBits!
+    data->set_dampingArrayList();
 
     // read dims, numCols, and numBlocks
     int xRes, yRes, zRes;
@@ -2696,7 +2832,8 @@ void GetSubmatrixNoSVDSparse(int startRow, MATRIX_COMPRESSION_DATA* data, Matrix
       RunLengthDecodeBinaryInPlaceSparse(allDataX, blockNumber, i, reverseZigzag, compression_dataX, unflattened, nonZeros);
 
       // undo the scaling from the quantizer
-      DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataX, decodedBlock.data(), nonZeros);
+      //DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataX, decodedBlock.data(), nonZeros);
+      DecodeBlockWithCompressionDataSparseQuantized(unflattened, blockNumber, i, compression_dataX, decodedBlock.data(), nonZeros);
 
       // inverse DCT
       DCT_Smart_Unitary(plan, direction, in, &decodedBlock);
@@ -2731,7 +2868,8 @@ void GetSubmatrixNoSVDSparse(int startRow, MATRIX_COMPRESSION_DATA* data, Matrix
       // undo the scaling from the quantizer
       // TK: Do it on the raw pointer instead
       //DecodeBlockWithCompressionData(unflattened, blockNumber, i, compression_dataY, decodedBlock.data());
-      DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataY, decodedBlock.data(), nonZeros);
+      //DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataY, decodedBlock.data(), nonZeros);
+      DecodeBlockWithCompressionDataSparseQuantized(unflattened, blockNumber, i, compression_dataY, decodedBlock.data(), nonZeros);
 
       // inverse DCT
       DCT_Smart_Unitary(plan, direction, in, &decodedBlock);
@@ -2767,7 +2905,8 @@ void GetSubmatrixNoSVDSparse(int startRow, MATRIX_COMPRESSION_DATA* data, Matrix
       // TK: Do it on the raw pointer instead
       //DecodeBlockWithCompressionData(unflattened, blockNumber, i, compression_dataZ, &decodedBlock);
       //DecodeBlockWithCompressionData(unflattened, blockNumber, i, compression_dataZ, decodedBlock.data());
-      DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataZ, decodedBlock.data(), nonZeros);
+      //DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, i, compression_dataZ, decodedBlock.data(), nonZeros);
+      DecodeBlockWithCompressionDataSparseQuantized(unflattened, blockNumber, i, compression_dataZ, decodedBlock.data(), nonZeros);
 
       // inverse DCT
       DCT_Smart_Unitary(plan, direction, in, &decodedBlock);
@@ -3371,7 +3510,9 @@ void DecodeScalarFieldEigenSparse(COMPRESSION_DATA* compression_data, int* allDa
     // TK: Do the decode in a way that avoids the need to copy into an Eigen
     // VectorXd at the end
     VectorXd& final = (*decoded)[blockNumber];
-    DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, col,
+    /*DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, col,
+        compression_data, final.data(), nonZeros);*/
+     DecodeBlockWithCompressionDataSparseQuantized(unflattened, blockNumber, col,
         compression_data, final.data(), nonZeros);
     unflattened.clear(nonZeros.data(), nonZeros.size());
   }
@@ -3427,7 +3568,9 @@ void DecodeScalarFieldEigenSparse(COMPRESSION_DATA* compression_data, int* allDa
     // TK: Do the decode in a way that avoids the need to copy into an Eigen
     // VectorXd at the end
     VectorXd& final = (*decoded)[blockNumber];
-    DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, col,
+    /*DecodeBlockWithCompressionDataSparse(unflattened, blockNumber, col,
+        compression_data, final.data(), nonZeros);*/
+   DecodeBlockWithCompressionDataSparseQuantized(unflattened, blockNumber, col,
         compression_data, final.data(), nonZeros);
     //DecodeBlockWithCompressionData(unflattened, blockNumber, col,
     //    compression_data, final.data());

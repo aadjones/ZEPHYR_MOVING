@@ -15,8 +15,12 @@ class MATRIX_COMPRESSION_DATA {
 
     MATRIX_COMPRESSION_DATA(int* dataX, int* dataY, int* dataZ,
         COMPRESSION_DATA* compression_dataX, COMPRESSION_DATA* compression_dataY, COMPRESSION_DATA* compression_dataZ);
-    ~MATRIX_COMPRESSION_DATA();
 
+    //MATRIX_COMPRESSION_DATA(MATRIX_COMPRESSION_DATA& m);
+
+    //~MATRIX_COMPRESSION_DATA();
+
+    //MATRIX_COMPRESSION_DATA& operator=(MATRIX_COMPRESSION_DATA& m);
 
     // getters
 
@@ -108,9 +112,17 @@ class MATRIX_COMPRESSION_DATA {
    void dct_cleanup() {
      fftw_destroy_plan(_dct_plan);
      fftw_free(_dct_in);
+     _dct_in = NULL;
      fftw_cleanup();
    }
 
+  // build the damping arrays in each component
+  void set_dampingArrayLists() {
+    puts("Calling set_dampingArrayLists!");
+    _compression_dataX.set_dampingArrayList();
+    _compression_dataY.set_dampingArrayList();
+    _compression_dataZ.set_dampingArrayList();
+  }
 
   private:
     int* _dataX;

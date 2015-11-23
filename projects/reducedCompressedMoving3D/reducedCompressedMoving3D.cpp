@@ -377,6 +377,7 @@ int main(int argc, char *argv[])
   fluid->loadReducedIOP(string(""));
   // For debugging, use loadReducedIOPAll here and stepMovingDebug in runEverytime.
   // fluid->loadReducedIOPAll(string(""));
+  
   puts("finished loadReducedIOP");
 
   fluid->initCompressionData();
@@ -404,6 +405,7 @@ int main(int argc, char *argv[])
 
 void runOnce()
 {
+  fluid->initCompressionData();
 }
 
 void runEverytime()
@@ -441,7 +443,7 @@ void runEverytime()
     {
       VECTOR::printVertical = false;
       // ADJ: commenting out the timingsPerFrame for now since it seems bugged
-      // TIMER::printTimingsPerFrame(step);
+      TIMER::printTimingsPerFrame(step);
       cout << " velocityAbs = " << VECTOR(fluid->velocityErrorAbs()) << ";" << endl;
       cout << " velocityRelative = " << VECTOR(fluid->velocityErrorRelative()) << ";" << endl;
       cout << " densityAbs = " << VECTOR(fluid->densityErrorAbs()) << ";" << endl;

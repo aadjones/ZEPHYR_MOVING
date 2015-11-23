@@ -480,6 +480,7 @@ public:
   
   static inline double fastPow(double a, double b) 
   {
+    //printf(" calling fast pow. ");
     union {
       double d;
       int x[2];
