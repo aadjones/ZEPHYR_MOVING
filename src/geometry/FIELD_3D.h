@@ -224,6 +224,7 @@ public:
 
   // take each element to the specified power
   void toPower(double power);
+
   void toFastPower(double power);
 
   void toPower(double power, const vector<int>& nonZeros);
@@ -475,8 +476,11 @@ public:
 
   // from here: 
   // http://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp/
+
+  
   static inline double fastPow(double a, double b) 
   {
+    //printf(" calling fast pow. ");
     union {
       double d;
       int x[2];
@@ -485,6 +489,7 @@ public:
     u.x[0] = 0;
     return u.d;
   }
+  
 
 
 private:

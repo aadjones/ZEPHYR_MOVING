@@ -69,7 +69,10 @@ VECTOR::VECTOR(const vector<Real>& v)
 
 VECTOR::~VECTOR()
 {
-  if (_vector) free(_vector);
+  if (_vector) {
+    free(_vector);
+    _vector = NULL;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -453,7 +456,7 @@ void VECTOR::axpy(Real alpha, const VECTOR& x)
 }
 
 //////////////////////////////////////////////////////////////////////
-// out of  place component-wise absolute value
+// out of place component-wise absolute value
 //////////////////////////////////////////////////////////////////////
 VECTOR VECTOR::abs() const
 {
@@ -462,6 +465,34 @@ VECTOR VECTOR::abs() const
     return_vector[x] = std::abs(_vector[x]);
   }
   return return_vector;
+}
+
+//////////////////////////////////////////////////////////////////////
+// return the minimum entry
+//////////////////////////////////////////////////////////////////////
+Real VECTOR::min() const
+{
+  Real m = 0.0;
+  for (int x = 0; x < _size; x++) {
+    if ((*this)[x] < m) {
+      m = (*this)[x];
+    }
+  }
+  return m;
+}
+
+//////////////////////////////////////////////////////////////////////
+// return the maximum entry
+//////////////////////////////////////////////////////////////////////
+Real VECTOR::max() const
+{
+  Real m = 0.0;
+  for (int x = 0; x < _size; x++) {
+    if ((*this)[x] > m) {
+      m = (*this)[x];
+    }
+  }
+  return m;
 }
 
 //////////////////////////////////////////////////////////////////////
