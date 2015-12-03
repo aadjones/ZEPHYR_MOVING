@@ -56,6 +56,15 @@ void PreprocessSingularValues(const char* filename, double threshold);
 // check if a file exists
 bool fileExists(const string& filename);
 
+// get the length of a file in bytes
+unsigned long long FileSize(const string& filename);
+
+// compute and print the compression ratios
+void GetCompressionRatios(const string& preadvectFilename, const string& finalFilename);
+
+string preadvectPath;
+string finalPath;
+
 ////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////
@@ -106,10 +115,10 @@ int main(int argc, char* argv[]) {
   cout << " fastPow: " << usingFastPow << endl;
   FIELD_3D::usingFastPow() = usingFastPow;
 
-  string preAdvectPath = reducedPath + string("U.preadvect.matrix");
-  string finalPath = reducedPath + string("U.final.matrix");
+  preadvectPath = reducedPath + string("U.preadvect.matrix");
+  finalPath = reducedPath + string("U.final.matrix");
 
-  EIGEN::read(preAdvectPath, U_preadvect);
+  EIGEN::read(preadvectPath, U_preadvect);
   EIGEN::read(finalPath, U_final);
 
   // set the parameters in compression data
@@ -206,6 +215,8 @@ int main(int argc, char* argv[]) {
 
     }
 
+  GetCompressionRatios(preadvectFilename, finalFilename);
+
   TIMER::printTimings();
   
   return 0;
@@ -298,3 +309,54 @@ bool fileExists(const string& filename)
   return true;
 }
 
+
+//////////////////////////////////////////////////////////////////////
+// get the size of a file in bytes
+//////////////////////////////////////////////////////////////////////
+unsigned long long FileSize(const string& filename)
+{
+  TIMER functionTimer(__FUNCTION__);
+  FILE* file;
+  file = fopen(filename.c_str(), "rb");
+  unsigned long long size;
+
+  if (file == NULL) perror ("Error opening file");
+  else {
+  fseek(file, 0, SEEK_END);   // non-portable
+  size = (unsigned long long) ftell(file);
+  fclose (file);
+  }
+  return size;
+}
+
+//////////////////////////////////////////////////////////////////////
+// compute and print the compression ratios
+//////////////////////////////////////////////////////////////////////
+void GetCompressionRatios(const string& preadvectFilename, const string& finalFilename)
+{
+  TIMER functionTimer(__FUNCTION__);
+  puts("Computing compression ratios...");
+
+  auto preadvectSize = FileSize(preadvectPath);
+  auto finalSize     = FileSize(finalPath);
+
+  string compressedPreadvect0 = preadvectFilename + '0';
+  string compressedPreadvect1 = preadvectFilename + '1';
+  string compressedPreadvect2 = preadvectFilename + '2';
+  auto preadvectSize0 = FileSize(compressedPreadvect0);
+  auto preadvectSize1 = FileSize(compressedPreadvect1);
+  auto preadvectSize2 = FileSize(compressedPreadvect2);
+
+  string compressedFinal0 = finalFilename + '0';
+  string compressedFinal1 = finalFilename + '1';
+  string compressedFinal2 = finalFilename + '2';
+  auto finalSize0 = FileSize(compressedFinal0);
+  auto finalSize1 = FileSize(compressedFinal1);
+  auto finalSize2 = FileSize(compressedFinal2);
+
+  double preadvectCompression = preadvectSize / (double) (preadvectSize0 + preadvectSize1 + preadvectSize2);
+  double finalCompression = finalSize / (double) (finalSize0 + finalSize1 + finalSize2);
+
+  printf("U.preadvect compression ratio is %f : 1\n", preadvectCompression);
+  printf("U.final compression ratio is %f : 1\n", finalCompression);
+}
