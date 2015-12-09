@@ -179,7 +179,7 @@ void TIMER::printTimingsPerFrame(const int frames)
 
   // print the map out backwards since it sorts from least to greatest
   cout << "====================================================================================" << endl;
-  cout << " TIMING BREAKDOWN, FRAME " << frames << ": " << endl;
+  cout << " TIMING BREAKDOWN, FRAME " << 1 + frames << ": " << endl;
   cout << "====================================================================================" << endl;
   map<double,string>::reverse_iterator backwardIter;
   char buffer[256];

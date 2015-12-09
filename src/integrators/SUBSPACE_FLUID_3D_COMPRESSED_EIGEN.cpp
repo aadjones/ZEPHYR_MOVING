@@ -1521,13 +1521,9 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedRuntimeBases(string path)
 
   string filename;
   
-  // TODO: insert the decoder for U.preadvect
   COMPRESSION_DATA compression_data0;
   COMPRESSION_DATA compression_data1;
   COMPRESSION_DATA compression_data2;
-
-  // filename = string("U.preadvect.SVD.data");
-  // ReadSVDData(filename, &compression_data0);
 
   string preadvectFile = _reducedPath + string("U.preadvect.component0");
   int* allData0 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data0);
@@ -1543,23 +1539,9 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedRuntimeBases(string path)
   _U_preadvect_data.init_cache();
   _U_preadvect_data.set_dampingArrayLists();
 
-
-  COMPRESSION_DATA* preadvect_dataX = _U_preadvect_data.get_compression_dataX();
-  const VEC3I& dims = preadvect_dataX->get_dims();
-  int numRows = 3 * dims[0] * dims[1] * dims[2]; 
-
-  // EIGEN::read(filename, _preadvectU);
-  // if (_preadvectU.rows() > 1000000)
-
-  if (numRows > 1000000) 
-    purge();
-  
   COMPRESSION_DATA final_compression_data0;
   COMPRESSION_DATA final_compression_data1;
   COMPRESSION_DATA final_compression_data2;
-
-  // filename = string("U.final.SVD.data");
-  // ReadSVDData(filename, &compression_data0);
 
   string finalFile = _reducedPath + string("U.final.component0");
   allData0 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data0);
@@ -1568,24 +1550,12 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedRuntimeBases(string path)
   finalFile = _reducedPath + string("U.final.component2");
   allData2 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data2);
 
-
   _U_final_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
       &final_compression_data0, &final_compression_data1, &final_compression_data2); 
 
   _U_final_data.dct_setup(-1);
   _U_final_data.init_cache();
   _U_final_data.set_dampingArrayLists();
-
-  // EIGEN::read(filename, _U);
-  
-  COMPRESSION_DATA* final_dataX = _U_final_data.get_compression_dataX();
-  const VEC3I& dimsFinal = final_dataX->get_dims();
-  numRows = 3 * dimsFinal[0] * dimsFinal[1] * dimsFinal[2]; 
-
-  // EIGEN::read(filename, _preadvectU);
-  // if (_U.rows() > 1000000)
-  if (numRows > 1000000) 
-    purge();
 
   TIMER::printTimings();
 }

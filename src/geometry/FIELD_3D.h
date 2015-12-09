@@ -490,7 +490,8 @@ public:
     return u.d;
   }
   
-
+  // write out to a PBRT file for rendering
+  static void exportPbrt(const FIELD_3D& density, const char* out);
 
 private:
   int _xRes;
@@ -556,6 +557,8 @@ private:
   
   // helper to write out to an image file
   void writeProjectedIntern(int dir1, int dir2, string prefix, int picCnt, float scale=1.); 
+
+
 };
 
 FIELD_3D operator^(const FIELD_3D& A, const Real alpha);

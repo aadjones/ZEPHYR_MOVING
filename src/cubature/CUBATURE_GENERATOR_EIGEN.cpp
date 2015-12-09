@@ -432,6 +432,8 @@ void CUBATURE_GENERATOR_EIGEN::generateImportanceSampledCubature()
        _postadvectionMagnitudes(x) = 1.0f;
 
   // stack normalized force samples into one big 'b' vector
+  // ADJ: this could create potential memory problems if totalRows is too large
+  // We also may need to declare the variable totalRows and indices into it as type *long*
   VectorXd b(totalRows);
   int index = 0;
   for (int x = 0; x < totalSamples; x++)

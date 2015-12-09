@@ -59,7 +59,6 @@ int main(int argc, char* argv[])
   bool usingIOP = parser.getBool("iop", false);
   if (usingIOP) { cout << "Using IOP: true" << endl; }
   else { cout << "Using IOP: false" << endl; }
-  // bool usingIOP = true;
 
   unsigned int boundaries[6];
   boundaries[0] = parser.getInt("front", 1);

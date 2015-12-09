@@ -410,14 +410,14 @@ void runEverytime()
       fluid->setInitialVelocity(box);
     }
 
-    // the splitting is not permuted in this method
     fluid->stepMovingObstacle(box);
 
     box->translate_center();
     box->spin();
-
     box->update_time();
     
+    // DEBUG
+    // Load in the ground truth for visual comparison
     /* 
     char buffer[256];
     string path = snapshotPath;
