@@ -25,7 +25,8 @@
 int BIG_MATRIX::_blockSize = 115;
 
 // IMPORTANT! Set this path to the SSD drive
-string BIG_MATRIX::_scratchPath = string("./scratch/");
+// string BIG_MATRIX::_scratchPath = string("./scratch/");
+string BIG_MATRIX::_scratchPath = string("/Volumes/MyBook/scratch/");
 
 //////////////////////////////////////////////////////////////////////
 // Constructor for the full matrix
