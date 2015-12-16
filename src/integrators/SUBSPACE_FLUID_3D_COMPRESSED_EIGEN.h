@@ -60,7 +60,7 @@ public:
   void stepMovingObstacleDebug(BOX* box);
 
   // const MatrixXd& U() const { return _U; };
-  // const MatrixXd& preadvectU() const { return _preadvectU; };
+  const MatrixXd& preadvectU() const { return _preadvectU; };
 
   MATRIX_COMPRESSION_DATA& U_final_data() { return _U_final_data; }
   MATRIX_COMPRESSION_DATA& U_preadvect_data() { return _U_preadvect_data; }

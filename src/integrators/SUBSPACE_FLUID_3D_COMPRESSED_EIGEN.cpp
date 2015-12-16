@@ -1502,10 +1502,16 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadCubatureTrainingBases()
   _U_preadvect_data.init_cache();
   _U_preadvect_data.set_dampingArrayLists();
 
-  // EIGEN::read(filename, _preadvectU);
+  // DEBUG
+  EIGEN::read(filename, _preadvectU);
 
   filename = _reducedPath + string("U.prediffuse.matrix");
   EIGEN::read(filename, _prediffuseU);
+
+
+  // DEBUG
+  filename = _reducedPath + string("U.preadvect.matrix");
+  EIGEN::read(filename, _preadvectU);
 }
 
 //////////////////////////////////////////////////////////////////////

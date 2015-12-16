@@ -151,17 +151,6 @@ int main(int argc, char* argv[])
       exit(0);
     }
 
-    // DEBUG
-
-    auto testRandom = VECTOR3_FIELD_3D(xRes, yRes, zRes);
-    testRandom.setToRandom();
-    auto projectedTrue = preadvectU.transpose() * testRandom.peelBoundary().flattenedEigen();
-    VectorXd projectedCompressed;
-    PeeledCompressedProjectTransformNoSVD(testRandom, &U_preadvect_data, &projectedCompressed);
-    printf("Random compression diff: %f\n", (projectedTrue - projectedCompressed).norm());
-
-
-
 
     for (int x = 0; x < reducedSnapshots; x++)
     {
@@ -177,15 +166,7 @@ int main(int argc, char* argv[])
       PeeledCompressedProjectTransformNoSVD(preadvectField, &U_preadvect_data, &q);
       preadvection.push_back(q);
       // preadvection.push_back(preadvectU.transpose() * preadvect);
-      VectorXd qReal = preadvectU.transpose() * preadvect;
-      VectorXd error = q - qReal;
-      printf("Compression error: %f\n", error.norm());
-      cout << "q: " << endl;
-      cout << q << endl;
-      cout << "correct q: " << endl;
-      cout << qReal << endl;
 
-    
       postadvection.push_back(prediffuseU.transpose() * prediffuse);
 
       // do a sanity check on the projection error of preadvection

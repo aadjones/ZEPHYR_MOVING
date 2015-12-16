@@ -457,10 +457,10 @@ void CUBATURE_GENERATOR_COMPRESSED_EIGEN::generateImportanceSampledCubature()
   int totalCandidates = 5000;
   vector<int> candidates;
   VectorXd weights;
-  //int totalPasses = 6;
+  int totalPasses = 6;
   // ADJ: for compression, it doesn't seem like it is ever going to 
   // get close to 1% error even with multiple passes...
-  int totalPasses = 1;
+  // int totalPasses = 1;
   map<int, bool> alreadyUsed;
 
   for (int x = 0; x < totalPasses; x++)
