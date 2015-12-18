@@ -72,6 +72,9 @@ public:
   // get the sub-basis of a cell from a specific basis  
   MatrixXd cellBasisPeeled(const MatrixXd& U, const int index);
 
+  void cellBasisPeeledMemory(int prediffuseRows, int prediffuseCols, FILE* prediffuseFile, double* cellData,
+    const int index);
+
   // advect a single cell using Semi-Lagrangian,
   // assuming that "index" is a peeled index, not a full grid index
   VectorXd advectCellStamPeeled(const MatrixXd& U, const Real& dt, const VectorXd& qDot, const int index);
@@ -83,6 +86,9 @@ public:
 
   void loadPreadvect();
   void loadPrediffuse();
+
+  void wipePreadvect();
+  void wipePrediffuse();
   
   // stomp all loaded bases
   void stompAllBases();
