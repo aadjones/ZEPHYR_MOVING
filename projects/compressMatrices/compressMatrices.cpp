@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
   cout << "numRows: " << numRows << endl;
   cout << "numCols: "<< numCols << endl;
 
-  MatrixXd U_preadvect(numRows, numCols);
+  //MatrixXd U_preadvect(numRows, numCols);
   MatrixXd U_final(numRows, numCols);
 
   int nBits = parser.getInt("nBits", 24); 
@@ -115,16 +115,16 @@ int main(int argc, char* argv[]) {
   cout << " fastPow: " << usingFastPow << endl;
   FIELD_3D::usingFastPow() = usingFastPow;
 
-  preadvectPath = reducedPath + string("U.preadvect.matrix");
+  //preadvectPath = reducedPath + string("U.preadvect.matrix");
   finalPath = reducedPath + string("U.final.matrix");
 
-  EIGEN::read(preadvectPath, U_preadvect);
+  //EIGEN::read(preadvectPath, U_preadvect);
   EIGEN::read(finalPath, U_final);
 
   // set the parameters in compression data
-  COMPRESSION_DATA preadvect_compression_data0(dims, numCols, nBits, percent);
-  COMPRESSION_DATA preadvect_compression_data1(dims, numCols, nBits, percent);
-  COMPRESSION_DATA preadvect_compression_data2(dims, numCols, nBits, percent);
+  //COMPRESSION_DATA preadvect_compression_data0(dims, numCols, nBits, percent);
+  //COMPRESSION_DATA preadvect_compression_data1(dims, numCols, nBits, percent);
+  //COMPRESSION_DATA preadvect_compression_data2(dims, numCols, nBits, percent);
   COMPRESSION_DATA final_compression_data0(dims, numCols, nBits, percent);
   COMPRESSION_DATA final_compression_data1(dims, numCols, nBits, percent);
   COMPRESSION_DATA final_compression_data2(dims, numCols, nBits, percent);
@@ -140,8 +140,11 @@ int main(int argc, char* argv[]) {
   */
 
   // ADJ: change this threshold to modulate singular value damping
+  
+  
   const double threshold = 1.0; 
   string scratchPath = "./scratch/";
+  /*
   string preadvectSingularFilename = scratchPath + string("velocity.preadvect.matrix.singularValues.vector");
   string preadvectProcessed = preadvectSingularFilename + string(".processed");
   if (!fileExists(preadvectProcessed)) {
@@ -159,8 +162,10 @@ int main(int argc, char* argv[]) {
 
   PreprocessEncoder(&preadvect_compression_data0, &preadvect_compression_data1, &preadvect_compression_data2, 
       maxIterations, preadvectSingularFilename.c_str());
+  */
 
   string finalSingularFilename = scratchPath + string("velocity.final.matrix.singularValues.vector");
+  /*
   string finalProcessed = finalSingularFilename + string(".processed");
   if (!fileExists(finalProcessed)) {
     puts("FInal singular values are unprocessed; processing now...");
@@ -173,29 +178,30 @@ int main(int argc, char* argv[]) {
     printf("Threshold equals: %f\n", threshold);
     PreprocessSingularValues(finalSingularFilename.c_str(), threshold);
   }
+  */
 
   PreprocessEncoder(&final_compression_data0, &final_compression_data1, &final_compression_data2,
       maxIterations, finalSingularFilename.c_str());
 
   // write a binary file for each scalar field component
 
-  string preadvectFilename = reducedPath + string("U.preadvect.component");
+  //string preadvectFilename = reducedPath + string("U.preadvect.component");
   string finalFilename = reducedPath + string("U.final.component");
 
 
   // write out the compressed matrix files
 
   if (debug) {
-    CompressAndWriteMatrixComponentsDebug(preadvectFilename.c_str(), U_preadvect, &preadvect_compression_data0,
-      &preadvect_compression_data1, &preadvect_compression_data2);
+    /*CompressAndWriteMatrixComponentsDebug(preadvectFilename.c_str(), U_preadvect, &preadvect_compression_data0,
+      &preadvect_compression_data1, &preadvect_compression_data2);*/
 
     CompressAndWriteMatrixComponentsDebug(finalFilename.c_str(), U_final, &final_compression_data0, 
       &final_compression_data1, &final_compression_data2);
   }
 
     else {
-      CompressAndWriteMatrixComponents(preadvectFilename.c_str(), U_preadvect, &preadvect_compression_data0,
-        &preadvect_compression_data1, &preadvect_compression_data2);
+      /*CompressAndWriteMatrixComponents(preadvectFilename.c_str(), U_preadvect, &preadvect_compression_data0,
+        &preadvect_compression_data1, &preadvect_compression_data2);*/
     
       CompressAndWriteMatrixComponents(finalFilename.c_str(), U_final, &final_compression_data0, 
         &final_compression_data1, &final_compression_data2);
@@ -215,7 +221,7 @@ int main(int argc, char* argv[]) {
 
     }
 
-  GetCompressionRatios(preadvectFilename, finalFilename);
+  //GetCompressionRatios(preadvectFilename, finalFilename);
 
   TIMER::printTimings();
   

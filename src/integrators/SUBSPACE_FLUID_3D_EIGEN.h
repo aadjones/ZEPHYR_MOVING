@@ -80,6 +80,9 @@ public:
 
   // stomp the other matrices and load the ones needed for cubature training
   void loadCubatureTrainingBases();
+
+  void loadPreadvect();
+  void loadPrediffuse();
   
   // stomp all loaded bases
   void stompAllBases();
@@ -101,6 +104,9 @@ public:
 
   // build and write out per-frame obstacle matrices
   void buildObstacleMatrices();
+
+  // build and write out per-frame obstacle matrices starting at 'start'
+  void buildRemainingObstacleMatrices(int start);
 
 protected: 
 
