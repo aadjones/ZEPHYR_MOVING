@@ -1825,21 +1825,6 @@ void SUBSPACE_FLUID_3D_EIGEN::loadCubatureTrainingBases()
   EIGEN::read(filename, _prediffuseU);
 }
 
-void SUBSPACE_FLUID_3D_EIGEN::loadPreadvect()
-{
-  string filename;
-  filename = _reducedPath + string("U.preadvect.matrix");
-  EIGEN::read(filename, _preadvectU);
-}
-
-void SUBSPACE_FLUID_3D_EIGEN::loadPrediffuse()
-{
-  string filename;
-  filename = _reducedPath + string("U.prediffuse.matrix");
-  EIGEN::read(filename, _prediffuseU);
-
-}
-
 //////////////////////////////////////////////////////////////////////
 // load the bases needed for cubature runtime
 //
