@@ -847,6 +847,31 @@ MatrixXd SUBSPACE_FLUID_3D_EIGEN::cellBasisPeeled(const MatrixXd& U, const int i
 }
 
 //////////////////////////////////////////////////////////////////////
+// get the sub-basis associated with a cell
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_EIGEN::cellBasisPeeledMemory(int prediffuseRows, int prediffuseCols, FILE* prediffuseFile, double* cellData,
+    const int index)
+{
+  TIMER functionTimer(__FUNCTION__);
+  // decompose into x,y,z
+  const int decompose = index;
+  const int z = decompose / _slabPeeled;
+  const int y = (decompose % _slabPeeled) / _xPeeled;
+  const int x = (decompose % _slabPeeled) % _xPeeled;
+
+  assert(x >= 0);
+  assert(x < _xRes - 2);
+  assert(y >= 0);
+  assert(y < _yRes - 2);
+  assert(z >= 0);
+  assert(z < _zRes - 2);
+  assert(3 * index < prediffuseRows); 
+
+  EIGEN::getRowsMemory(3 * index, 3, prediffuseFile, cellData, prediffuseRows, prediffuseCols); 
+  
+}
+
+//////////////////////////////////////////////////////////////////////
 // advect a single cell
 //////////////////////////////////////////////////////////////////////
 
@@ -1695,6 +1720,30 @@ void SUBSPACE_FLUID_3D_EIGEN::stompAllBases()
   _prediffuseU.resize(0,0);
   _preadvectU.resize(0,0);
   _U.resize(0,0);
+}
+
+void SUBSPACE_FLUID_3D_EIGEN::loadPreadvect()
+{
+  string filename = _reducedPath + string("U.preadvect.matrix");
+  EIGEN::read(filename, _preadvectU);
+}
+
+void SUBSPACE_FLUID_3D_EIGEN::wipePreadvect()
+{
+  _preadvectU.resize(0,0);
+  purge();
+}
+
+void SUBSPACE_FLUID_3D_EIGEN::loadPrediffuse()
+{
+  string filename = _reducedPath + string("U.prediffuse.matrix");
+  EIGEN::read(filename, _prediffuseU);
+}
+
+void SUBSPACE_FLUID_3D_EIGEN::wipePrediffuse()
+{
+  _prediffuseU.resize(0,0);
+  purge();
 }
 
 //////////////////////////////////////////////////////////////////////

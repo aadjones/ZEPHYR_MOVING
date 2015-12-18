@@ -47,6 +47,7 @@ public:
 
   static MatrixXd buildFromColumns(const vector<VectorXd>& columns);
   static MatrixXd getRows(const int rowBegin, const int totalRows, const MatrixXd& input);
+  static void getRowsMemory(const int rowBegin, const int totalRows, FILE* matrixInfo, double* matrixData, int rows, int cols);
   static void transposeProduct(const MatrixXd& left, const MatrixXd& right, MatrixXd& output);
   
   static VECTOR convert(const VectorXd& input);

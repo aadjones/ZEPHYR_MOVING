@@ -391,6 +391,38 @@ MatrixXd EIGEN::getRows(const int rowBegin, const int totalRows, const MatrixXd&
   return toReturn;
 }
 
+
+//////////////////////////////////////////////////////////////////////
+// Get a submatrix from reading a large file
+//////////////////////////////////////////////////////////////////////
+void EIGEN::getRowsMemory(const int rowBegin, const int totalRows, FILE* matrixInfo, double* matrixData, int rows, int cols)
+{
+  // check bounds
+
+  assert(rowBegin < rows);
+  assert(rowBegin >= 0);
+  assert(totalRows > 0);
+  assert(rowBegin + totalRows <= rows);
+
+  // ADJ: we're only ever using it for 3 at a time
+  assert(totalRows == 3);
+
+  // get the offset from the rows, cols at BOF
+  auto beginningOffset = 2 * sizeof(int);
+
+  // DEBUG
+  auto offset = beginningOffset + rowBegin*cols*sizeof(double);
+
+
+  // seek from BOF (SEEK_SET)
+  rewind(matrixInfo);
+  auto checkError = fseek(matrixInfo, beginningOffset + rowBegin*cols*sizeof(double), SEEK_SET);
+  if (checkError!=0) {perror("fseek failed!"); exit(EXIT_FAILURE);};
+  int numElements = totalRows * cols;
+  auto numRead = fread(matrixData, sizeof(double), numElements, matrixInfo);
+  if (numRead != numElements) {fputs ("Reading error",stderr); exit (3);}
+}
+
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 void EIGEN::transposeProduct(const MatrixXd& left, const MatrixXd& right, MatrixXd& output)
