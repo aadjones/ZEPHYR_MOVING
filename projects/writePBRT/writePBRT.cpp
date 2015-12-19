@@ -56,12 +56,12 @@ int main(int argc, char *argv[])
   char buffer[256];
   string path = snapshotPath;
   // choose which density field to load up
-  int step = 25;
+  int step = 99;
   sprintf(buffer, "%sfluid.%04i.fluid3d", path.c_str(), step);
   string filename(buffer);
   ground->readGz(filename);
 
-  const char* out = "density.pbrt";
+  const char* out = "fan_example_frame.pbrt";
   FIELD_3D::exportPbrt(ground->density(), out); 
 
   return 0;

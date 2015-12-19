@@ -85,8 +85,9 @@ public:
   void loadCubatureTrainingBases();
 
   void loadPreadvect();
-  void wipePreadvect();
   void loadPrediffuse();
+
+  void wipePreadvect();
   void wipePrediffuse();
   
   // stomp all loaded bases
@@ -109,6 +110,9 @@ public:
 
   // build and write out per-frame obstacle matrices
   void buildObstacleMatrices();
+
+  // build and write out per-frame obstacle matrices starting at 'start'
+  void buildRemainingObstacleMatrices(int start);
 
 protected: 
 

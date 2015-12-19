@@ -69,7 +69,8 @@ int main(int argc, char* argv[]) {
   // linke the fluid with the obstacle
   fluid->setObstacle(*box);
 
-  fluid->buildObstacleMatrices();
+  int start = 150;
+  fluid->buildRemainingObstacleMatrices(start);
 
   delete fluid;
   delete box;

@@ -1695,6 +1695,71 @@ void SUBSPACE_FLUID_3D_EIGEN::buildObstacleMatrices()
 }
 
 
+//////////////////////////////////////////////////////////////////////////////
+// Write out an obstacle matrix for each time step starting from 'start'
+//////////////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_EIGEN::buildRemainingObstacleMatrices(int start)
+{
+
+  // read in the projection matrices
+  string filename = _reducedPath + string("U.iop.matrix");
+  EIGEN::read(filename, _projectionIOP); 
+  filename = _reducedPath + string("U.preproject.matrix");
+  EIGEN::read(filename, _preprojectU);
+
+  puts(" Building obstacle matrices...");
+  // build U'U matrix first
+  _projectionIOP_T_preprojectU = _projectionIOP.transpose() * _preprojectU;
+
+  // allocate buffers for writing to files
+  char matrixBuffer[256];
+  char vectorBuffer[256];
+
+  printf(" Total reduced steps: %i\n", _totalReducedSteps);
+  printf(" Starting at step: %i\n", start);
+
+  for (int i = 0; i < start; i++) {
+     // update the box position before the next step.
+    // note that this is the internal box member variable,
+    // so it will not mutate the declared box inside reducedMoving.cpp
+    printf(" Updating box position at step: %i\n", i);
+    _box.translate_center();
+    _box.spin();
+    _box.update_time();
+  }
+
+  // loop through each step and write a unique matrix and vector per frame
+  for (int step = start; step < _totalReducedSteps; step++) {
+    printf(" Computing matrices for step: %i...\n", step);
+    setPeeledSparseMovingIOPComplement(&_box); 
+    _reducedIOP = _projectionIOP_T_preprojectU - 
+                  _neumannIOPcomplement.project(_projectionIOP, _preprojectU);
+
+    // generate step-based filename and write 
+    sprintf(matrixBuffer, "%sreducedIOP.matrix.%i", _reducedPath.c_str(), step);
+    EIGEN::write(matrixBuffer, _reducedIOP);
+
+    // project the homgeneous coordinate
+    _reducedNeumannVector = _projectionIOP.transpose() * _neumannVector;
+
+    // generate step-based filename and write
+    sprintf(vectorBuffer, "%sreducedNeumann.vector.%i", _reducedPath.c_str(), step);
+    EIGEN::write(vectorBuffer, _reducedNeumannVector);
+  
+    // update the box position before the next step.
+    // note that this is the internal box member variable,
+    // so it will not mutate the declared box inside reducedMoving.cpp
+    _box.translate_center();
+    _box.spin();
+    _box.update_time();
+  }
+  // stomp the huge matrices after precaching the subspace matrices is complete
+  _projectionIOP.resize(0, 0);
+  _preprojectU.resize(0, 0);
+  purge();
+}
+
+
 //////////////////////////////////////////////////////////////////////
 // check of a file exists
 //////////////////////////////////////////////////////////////////////
