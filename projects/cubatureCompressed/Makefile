@@ -1,7 +1,7 @@
 include ../include.mk
 
 # calls:
-CC         = g++
+CC         = ${COMPILER} 
 CFLAGS     = ${CFLAGS_COMMON} -I../../src/cubature/ -I../../src/Eigen/ -I../../src/compression/
 LDFLAGS    = ${LDFLAGS_COMMON}
 EXECUTABLE = ../../bin/cubatureCompressed

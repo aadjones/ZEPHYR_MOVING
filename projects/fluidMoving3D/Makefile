@@ -1,7 +1,7 @@
 include ../include.mk
 
 # calls:
-CC         = g++
+CC         = ${COMPILER} 
 CFLAGS     = ${CFLAGS_COMMON} 
 LDFLAGS    = ${LDFLAGS_COMMON}
 EXECUTABLE = ../../bin/fluidMoving3D
