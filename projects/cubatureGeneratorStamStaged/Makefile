@@ -20,6 +20,7 @@ SOURCES    = cubatureGeneratorStamStaged.cpp \
 						 ../../src/cubature/CUBATURE_GENERATOR_EIGEN.cpp \
 						 ../../src/geometry/FIELD_3D.cpp \
 						 ../../src/geometry/VECTOR3_FIELD_3D.cpp \
+						 ../../src/geometry/BOX.cpp \
 						 ../../src/integrators/SUBSPACE_FLUID_3D_EIGEN.cpp \
 						 ../../src/integrators/FLUID_3D_MIC.cpp \
 						 ../../src/geometry/FIELD_2D.cpp \
