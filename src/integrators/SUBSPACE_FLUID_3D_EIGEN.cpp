@@ -796,11 +796,14 @@ void SUBSPACE_FLUID_3D_EIGEN::diffGroundTruth()
   cout << " velocity abs error:      " << _velocityErrorAbs.back() << endl;
   cout << " velocity relative error: " << _velocityErrorRelative.back() << endl;
 
+  // ADJ: Forget density for now.
+  /*
   diff = _density.peelBoundary().flattenedEigen() - ground.density().peelBoundary().flattenedEigen();
   _densityErrorAbs.push_back(diff.norm());
   _densityErrorRelative.push_back(diff.norm() / _density.peelBoundary().flattened().norm2());
   cout << " density abs error:      " << _densityErrorAbs.back() << endl;
   cout << " density relative error: " << _densityErrorRelative.back() << endl;
+  */
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1759,6 +1762,53 @@ void SUBSPACE_FLUID_3D_EIGEN::buildRemainingObstacleMatrices(int start)
   purge();
 }
 
+//////////////////////////////////////////////////////////////////////
+// Write out the dims of the collection of subspace vectors into a matrix
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_EIGEN::writeSubspaceErrorMatrixDims(int simulationSnapshots)
+{
+  FILE* matrixFile;
+  string filename = _reducedPath + string("qDot.matrix");
+
+  matrixFile = fopen(filename.c_str(), "wb");
+  if (matrixFile==NULL) {
+    perror("Error opening matrixFile");
+    exit(EXIT_FAILURE);
+  }
+
+  int rows = simulationSnapshots;
+  int cols = simulationSnapshots;
+  // DEBUG
+  printf("Writing subspace error matrix dims: (%i, %i)\n", rows, cols);
+
+  fwrite((void*)(&rows), sizeof(int), 1, matrixFile);
+  fwrite((void*)(&cols), sizeof(int), 1, matrixFile);
+  fclose(matrixFile);
+
+}
+
+//////////////////////////////////////////////////////////////////////
+// Write the current subspace vector to the subspace matrix file
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_EIGEN::appendSubspaceVectors()
+{
+  FILE* matrixFile;
+  string filename = _reducedPath + string("qDot.matrix");
+
+  matrixFile = fopen(filename.c_str(), "ab");
+  if (matrixFile==NULL) {
+    perror("Error opening matrixFile");
+    exit(EXIT_FAILURE);
+  }
+
+  auto count = _qDot.size();
+  // DEBUG
+  printf("qDot has size: %lu\n", count);
+  fwrite((void*)(_qDot.data()), sizeof(double), count, matrixFile);
+
+  fclose(matrixFile);
+
+}
 
 //////////////////////////////////////////////////////////////////////
 // check of a file exists

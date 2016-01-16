@@ -60,7 +60,7 @@ bool fileExists(const string& filename);
 unsigned long long FileSize(const string& filename);
 
 // compute and print the compression ratios
-void GetCompressionRatios(const string& preadvectFilename, const string& finalFilename);
+double GetCompressionRatios(const string& preadvectFilename, const string& finalFilename);
 
 string preadvectPath;
 string finalPath;
@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
   cout << "numRows: " << numRows << endl;
   cout << "numCols: "<< numCols << endl;
 
-  //MatrixXd U_preadvect(numRows, numCols);
+  MatrixXd U_preadvect(numRows, numCols);
   MatrixXd U_final(numRows, numCols);
 
   int nBits = parser.getInt("nBits", 24); 
@@ -115,16 +115,16 @@ int main(int argc, char* argv[]) {
   cout << " fastPow: " << usingFastPow << endl;
   FIELD_3D::usingFastPow() = usingFastPow;
 
-  //preadvectPath = reducedPath + string("U.preadvect.matrix");
+  preadvectPath = reducedPath + string("U.preadvect.matrix");
   finalPath = reducedPath + string("U.final.matrix");
 
-  //EIGEN::read(preadvectPath, U_preadvect);
+  EIGEN::read(preadvectPath, U_preadvect);
   EIGEN::read(finalPath, U_final);
 
   // set the parameters in compression data
-  //COMPRESSION_DATA preadvect_compression_data0(dims, numCols, nBits, percent);
-  //COMPRESSION_DATA preadvect_compression_data1(dims, numCols, nBits, percent);
-  //COMPRESSION_DATA preadvect_compression_data2(dims, numCols, nBits, percent);
+  COMPRESSION_DATA preadvect_compression_data0(dims, numCols, nBits, percent);
+  COMPRESSION_DATA preadvect_compression_data1(dims, numCols, nBits, percent);
+  COMPRESSION_DATA preadvect_compression_data2(dims, numCols, nBits, percent);
   COMPRESSION_DATA final_compression_data0(dims, numCols, nBits, percent);
   COMPRESSION_DATA final_compression_data1(dims, numCols, nBits, percent);
   COMPRESSION_DATA final_compression_data2(dims, numCols, nBits, percent);
@@ -144,8 +144,10 @@ int main(int argc, char* argv[]) {
   
   const double threshold = 1.0; 
   string scratchPath = "./scratch/";
-  /*
+  
   string preadvectSingularFilename = scratchPath + string("velocity.preadvect.matrix.singularValues.vector");
+ 
+  /*
   string preadvectProcessed = preadvectSingularFilename + string(".processed");
   if (!fileExists(preadvectProcessed)) {
     puts("Preadvect singular values are unprocessed; processing now...");
@@ -159,10 +161,11 @@ int main(int argc, char* argv[]) {
     printf("Threshold equals: %f\n", threshold);
     PreprocessSingularValues(preadvectSingularFilename.c_str(), threshold);
   }
+  */
 
   PreprocessEncoder(&preadvect_compression_data0, &preadvect_compression_data1, &preadvect_compression_data2, 
       maxIterations, preadvectSingularFilename.c_str());
-  */
+  
 
   string finalSingularFilename = scratchPath + string("velocity.final.matrix.singularValues.vector");
   /*
@@ -185,23 +188,26 @@ int main(int argc, char* argv[]) {
 
   // write a binary file for each scalar field component
 
-  //string preadvectFilename = reducedPath + string("U.preadvect.component");
-  string finalFilename = reducedPath + string("U.final.component");
+  string command = string("mkdir ") + reducedPath + string("tmp");
+  system(command.c_str());
+ 
+  string preadvectFilename = reducedPath + string("tmp/U.preadvect.component");
+  string finalFilename = reducedPath + string("tmp/U.final.component");
 
 
   // write out the compressed matrix files
 
   if (debug) {
-    /*CompressAndWriteMatrixComponentsDebug(preadvectFilename.c_str(), U_preadvect, &preadvect_compression_data0,
-      &preadvect_compression_data1, &preadvect_compression_data2);*/
+    CompressAndWriteMatrixComponentsDebug(preadvectFilename.c_str(), U_preadvect, &preadvect_compression_data0,
+      &preadvect_compression_data1, &preadvect_compression_data2);
 
     CompressAndWriteMatrixComponentsDebug(finalFilename.c_str(), U_final, &final_compression_data0, 
       &final_compression_data1, &final_compression_data2);
   }
 
     else {
-      /*CompressAndWriteMatrixComponents(preadvectFilename.c_str(), U_preadvect, &preadvect_compression_data0,
-        &preadvect_compression_data1, &preadvect_compression_data2);*/
+      CompressAndWriteMatrixComponents(preadvectFilename.c_str(), U_preadvect, &preadvect_compression_data0,
+        &preadvect_compression_data1, &preadvect_compression_data2);
     
       CompressAndWriteMatrixComponents(finalFilename.c_str(), U_final, &final_compression_data0, 
         &final_compression_data1, &final_compression_data2);
@@ -221,7 +227,13 @@ int main(int argc, char* argv[]) {
 
     }
 
-  //GetCompressionRatios(preadvectFilename, finalFilename);
+  double ratio = GetCompressionRatios(preadvectFilename, finalFilename);
+  int roundedRatio = rint(ratio);
+  string newName = reducedPath + to_string(roundedRatio) + string("to1");
+  string rename = string("mv ") + reducedPath + string("tmp ") + newName;
+  system(rename.c_str());
+  string mkdir = string("mkdir ") + newName + string("/pbrt");
+  system(mkdir.c_str());
 
   TIMER::printTimings();
   
@@ -338,7 +350,7 @@ unsigned long long FileSize(const string& filename)
 //////////////////////////////////////////////////////////////////////
 // compute and print the compression ratios
 //////////////////////////////////////////////////////////////////////
-void GetCompressionRatios(const string& preadvectFilename, const string& finalFilename)
+double GetCompressionRatios(const string& preadvectFilename, const string& finalFilename)
 {
   TIMER functionTimer(__FUNCTION__);
   puts("Computing compression ratios...");
@@ -362,7 +374,10 @@ void GetCompressionRatios(const string& preadvectFilename, const string& finalFi
 
   double preadvectCompression = preadvectSize / (double) (preadvectSize0 + preadvectSize1 + preadvectSize2);
   double finalCompression = finalSize / (double) (finalSize0 + finalSize1 + finalSize2);
+  double overallCompression = 0.5 * (preadvectCompression + finalCompression);
 
   printf("U.preadvect compression ratio is %f : 1\n", preadvectCompression);
   printf("U.final compression ratio is %f : 1\n", finalCompression);
+  printf("Overall compression ratio is %f: 1\n", overallCompression);
+  return overallCompression;
 }

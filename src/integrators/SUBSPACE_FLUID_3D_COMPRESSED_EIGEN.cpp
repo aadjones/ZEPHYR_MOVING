@@ -222,6 +222,95 @@ SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::~SUBSPACE_FLUID_3D_COMPRESSED_EIGEN()
 }
 
 //////////////////////////////////////////////////////////////////////
+// Write out the dims of the collection of subspace vectors into a matrix
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::writeCompressedErrorMatrixDims(int simulationSnapshots)
+{
+  FILE* matrixFile;
+  string filename = _reducedPath + string("qDot.compressed.matrix");
+
+  matrixFile = fopen(filename.c_str(), "wb");
+  if (matrixFile==NULL) {
+    perror("Error opening matrixFile");
+    exit(EXIT_FAILURE);
+  }
+
+  int rows = simulationSnapshots;
+  int cols = simulationSnapshots;
+  // DEBUG
+  printf("Writing compressed subspace error matrix dims: (%i, %i)\n", rows, cols);
+
+  fwrite((void*)(&rows), sizeof(int), 1, matrixFile);
+  fwrite((void*)(&cols), sizeof(int), 1, matrixFile);
+  fclose(matrixFile);
+
+}
+
+//////////////////////////////////////////////////////////////////////
+// Write the current subspace vector to the subspace matrix file
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::appendCompressedSubspaceVectors()
+{
+  FILE* matrixFile;
+  string filename = _compressionPath + string("qDot.compressed.matrix");
+
+  matrixFile = fopen(filename.c_str(), "ab");
+  if (matrixFile==NULL) {
+    perror("Error opening matrixFile");
+    exit(EXIT_FAILURE);
+  }
+
+  auto count = _qDot.size();
+  // DEBUG
+  printf("qDot has size: %lu\n", count);
+  fwrite((void*)(_qDot.data()), sizeof(double), count, matrixFile);
+
+  fclose(matrixFile);
+
+}
+
+//////////////////////////////////////////////////////////////////////
+// load the qDotMatrix from disk to do compression comparisons
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadSubspaceComparisonMatrix()
+{
+  string path = _reducedPath + string("qDot.matrix");
+  EIGEN::read(path.c_str(), _qDotMatrix);
+
+  // DEBUG
+  printf("Read in qDotMatrix with dims: (%li, %li)\n", _qDotMatrix.rows(), _qDotMatrix.cols());
+
+  _l2Error.resize(_qDotMatrix.rows());
+  printf("Resized l2Error vector to size: %li\n", _l2Error.size());
+
+}
+
+//////////////////////////////////////////////////////////////////////
+// compare the compressed qDot with the uncompressed qDot using
+// relative L2 norm. call loadSubspaceComparisonMatrix() first!
+//////////////////////////////////////////////////////////////////////
+void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::compareSubspace(int step)
+{
+  // make sure _qDotMatrix has already been loaded
+  assert( _qDotMatrix.cols() > 0 );
+
+  assert( step >= 0 && step < _qDotMatrix.rows() );
+
+  VectorXd qDotTrue = _qDotMatrix.row(step);
+  VectorXd diff = qDotTrue - _qDot;
+  double relativeError = diff.norm() / qDotTrue.norm();
+  printf("Relative L2 error for step %i: %f\n", 1+step, relativeError);
+  _l2Error[step] = relativeError;
+
+  // DEBUG
+  cout << "qDotTrue: " << endl;
+  cout << EIGEN::convert(qDotTrue) << endl;
+  cout << "compressed qDot: " << endl;
+  cout << EIGEN::convert(_qDot) << endl;
+
+}
+
+//////////////////////////////////////////////////////////////////////
 // The reduced solver, with peeled boundaries, 
 // with cubature enabled
 //////////////////////////////////////////////////////////////////////
@@ -899,11 +988,14 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::diffGroundTruth()
   cout << " velocity abs error:      " << _velocityErrorAbs.back() << endl;
   cout << " velocity relative error: " << _velocityErrorRelative.back() << endl;
 
+  // ADJ: Ignore density for now.
+  /*
   diff = _density.peelBoundary().flattenedEigen() - ground.density().peelBoundary().flattenedEigen();
   _densityErrorAbs.push_back(diff.norm());
   _densityErrorRelative.push_back(diff.norm() / _density.peelBoundary().flattened().norm2());
   cout << " density abs error:      " << _densityErrorAbs.back() << endl;
   cout << " density relative error: " << _densityErrorRelative.back() << endl;
+  */
 }
 
 //////////////////////////////////////////////////////////////////////
