@@ -338,6 +338,7 @@ int main(int argc, char *argv[])
   int zRes = parser.getInt("zRes", 48);
   reducedPath = parser.getString("reduced path", "./data/reduced.dummy/");
   compressionPath = parser.getString("compression path", "./data/reduced.dummy/");
+  cout << "Compression path is: " << compressionPath << endl;
   snapshotPath = parser.getString("snapshot path", "./data/dummy/");
   previewReducedMovie = parser.getString("preview movie", "./movies/movie.mov");
   cout << "Reduced movie is written to: " << previewReducedMovie << endl;

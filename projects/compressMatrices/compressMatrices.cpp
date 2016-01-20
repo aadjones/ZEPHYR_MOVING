@@ -62,8 +62,12 @@ unsigned long long FileSize(const string& filename);
 // compute and print the compression ratios
 double GetCompressionRatios(const string& preadvectFilename, const string& finalFilename);
 
+// update the cfg file to point to the correct compression path
+void UpdateCfgFile(int roundedOverallCompression);
+
 string preadvectPath;
 string finalPath;
+string cfgFilename;
 
 ////////////////////////////////////////////////////////
 // Main
@@ -79,6 +83,7 @@ int main(int argc, char* argv[]) {
   }
   
   SIMPLE_PARSER parser(argv[1]);
+  cfgFilename = argv[1];
   string reducedPath = parser.getString("reduced path", "./data/reduced.dummy/"); 
   int xRes = parser.getInt("xRes", 48);
   int yRes = parser.getInt("yRes", 64);
@@ -143,10 +148,11 @@ int main(int argc, char* argv[]) {
   
   
   const double threshold = 1.0; 
+  // ADJ: change the scratch path to SSD for big runs!
   string scratchPath = "./scratch/";
   
   string preadvectSingularFilename = scratchPath + string("velocity.preadvect.matrix.singularValues.vector");
- 
+
   /*
   string preadvectProcessed = preadvectSingularFilename + string(".processed");
   if (!fileExists(preadvectProcessed)) {
@@ -190,7 +196,6 @@ int main(int argc, char* argv[]) {
 
   string command = string("mkdir ") + reducedPath + string("tmp");
   system(command.c_str());
- 
   string preadvectFilename = reducedPath + string("tmp/U.preadvect.component");
   string finalFilename = reducedPath + string("tmp/U.final.component");
 
@@ -233,7 +238,9 @@ int main(int argc, char* argv[]) {
   string rename = string("mv ") + reducedPath + string("tmp ") + newName;
   system(rename.c_str());
   string mkdir = string("mkdir ") + newName + string("/pbrt");
-  system(mkdir.c_str());
+  system(mkdir.c_str()); 
+
+  UpdateCfgFile(roundedRatio);
 
   TIMER::printTimings();
   
@@ -380,4 +387,11 @@ double GetCompressionRatios(const string& preadvectFilename, const string& final
   printf("U.final compression ratio is %f : 1\n", finalCompression);
   printf("Overall compression ratio is %f: 1\n", overallCompression);
   return overallCompression;
+}
+
+// automatically update the compression and movie paths based on compression ratio. calls a python script inside ./cfg
+void UpdateCfgFile(int roundedOverallCompression)
+{
+  string cmd = string("python ./cfg/findReplace.py ") + cfgFilename + string(" ") + to_string(roundedOverallCompression);
+  system(cmd.c_str());
 }

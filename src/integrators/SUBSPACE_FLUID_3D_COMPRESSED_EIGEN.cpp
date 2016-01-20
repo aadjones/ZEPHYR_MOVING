@@ -227,7 +227,7 @@ SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::~SUBSPACE_FLUID_3D_COMPRESSED_EIGEN()
 void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::writeCompressedErrorMatrixDims(int simulationSnapshots)
 {
   FILE* matrixFile;
-  string filename = _reducedPath + string("qDot.compressed.matrix");
+  string filename = _compressionPath + string("qDot.compressed.matrix");
 
   matrixFile = fopen(filename.c_str(), "wb");
   if (matrixFile==NULL) {
@@ -1261,11 +1261,11 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::readAdvectionCubature()
     // const char* filename = "U.preadvect.SVD.data";
     // ReadSVDData(filename, &compression_data0);
 
-    string preadvectFile = _reducedPath + string("U.preadvect.component0");
+    string preadvectFile = _compressionPath + string("U.preadvect.component0");
     int* allData0 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data0);
-    preadvectFile = _reducedPath + string("U.preadvect.component1");
+    preadvectFile = _compressionPath + string("U.preadvect.component1");
     int* allData1 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data1);
-    preadvectFile = _reducedPath + string("U.preadvect.component2");
+    preadvectFile = _compressionPath + string("U.preadvect.component2");
     int* allData2 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data2);
 
 
@@ -1580,11 +1580,11 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadCubatureTrainingBases()
   // filename = string("U.preadvect.SVD.data");
   // ReadSVDData(filename.c_str(), &compression_data0);
 
-  string preadvectFile = _reducedPath + string("U.preadvect.component0");
+  string preadvectFile = _compressionPath + string("U.preadvect.component0");
   int* allData0 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data0);
-  preadvectFile = _reducedPath + string("U.preadvect.component1");
+  preadvectFile = _compressionPath + string("U.preadvect.component1");
   int* allData1 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data1);
-  preadvectFile = _reducedPath + string("U.preadvect.component2");
+  preadvectFile = _compressionPath + string("U.preadvect.component2");
   int* allData2 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data2);
 
   _U_preadvect_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
@@ -1623,11 +1623,11 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedRuntimeBases(string path)
   COMPRESSION_DATA compression_data1;
   COMPRESSION_DATA compression_data2;
 
-  string preadvectFile = _reducedPath + string("U.preadvect.component0");
+  string preadvectFile = _compressionPath + string("U.preadvect.component0");
   int* allData0 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data0);
-  preadvectFile = _reducedPath + string("U.preadvect.component1");
+  preadvectFile = _compressionPath + string("U.preadvect.component1");
   int* allData1 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data1);
-  preadvectFile = _reducedPath + string("U.preadvect.component2");
+  preadvectFile = _compressionPath + string("U.preadvect.component2");
   int* allData2 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data2);
 
   _U_preadvect_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
@@ -1641,11 +1641,11 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedRuntimeBases(string path)
   COMPRESSION_DATA final_compression_data1;
   COMPRESSION_DATA final_compression_data2;
 
-  string finalFile = _reducedPath + string("U.final.component0");
+  string finalFile = _compressionPath + string("U.final.component0");
   allData0 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data0);
-  finalFile = _reducedPath + string("U.final.component1");
+  finalFile = _compressionPath + string("U.final.component1");
   allData1 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data1);
-  finalFile = _reducedPath + string("U.final.component2");
+  finalFile = _compressionPath + string("U.final.component2");
   allData2 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data2);
 
   _U_final_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
@@ -1675,11 +1675,11 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedIOP(string path)
   COMPRESSION_DATA compression_data1;
   COMPRESSION_DATA compression_data2;
 
-  string preadvectFile = _reducedPath + string("U.preadvect.component0");
+  string preadvectFile = _compressionPath + string("U.preadvect.component0");
   int* allData0 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data0);
-  preadvectFile = _reducedPath + string("U.preadvect.component1");
+  preadvectFile = _compressionPath + string("U.preadvect.component1");
   int* allData1 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data1);
-  preadvectFile = _reducedPath + string("U.preadvect.component2");
+  preadvectFile = _compressionPath + string("U.preadvect.component2");
   int* allData2 = ReadBinaryFileToMemory(preadvectFile.c_str(), &compression_data2);
 
   _U_preadvect_data = MATRIX_COMPRESSION_DATA(allData0, allData1, allData2,
@@ -1694,11 +1694,11 @@ void SUBSPACE_FLUID_3D_COMPRESSED_EIGEN::loadReducedIOP(string path)
   COMPRESSION_DATA final_compression_data1;
   COMPRESSION_DATA final_compression_data2;
 
-  string finalFile = _reducedPath + string("U.final.component0");
+  string finalFile = _compressionPath + string("U.final.component0");
   allData0 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data0);
-  finalFile = _reducedPath + string("U.final.component1");
+  finalFile = _compressionPath + string("U.final.component1");
   allData1 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data1);
-  finalFile = _reducedPath + string("U.final.component2");
+  finalFile = _compressionPath + string("U.final.component2");
   allData2 = ReadBinaryFileToMemory(finalFile.c_str(), &final_compression_data2);
 
 

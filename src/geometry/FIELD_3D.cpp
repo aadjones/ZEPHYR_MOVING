@@ -2043,7 +2043,7 @@ void FIELD_3D::extendOneway(bool forward, FIELD_3D& distance, MIN_HEAP& minHeap)
           if (i == 2)
           {
             float interpolate = 1.0f / (3.0f * newDist - distances[2] - distances[1] - distances[0]);
-            float diffs[] = {(newDist - distances[0]), (newDist - distances[1]), (newDist - distances[2])};
+            float diffs[] = {static_cast<float>(newDist - distances[0]), static_cast<float>(newDist - distances[1]),static_cast<float> (newDist - distances[2])};
             _data[candidate] = (diffs[0] * extensions[0] +
                                 diffs[1] * extensions[1] +
                                 diffs[2] * extensions[2]) * interpolate;
@@ -2051,7 +2051,7 @@ void FIELD_3D::extendOneway(bool forward, FIELD_3D& distance, MIN_HEAP& minHeap)
           else if (i == 1)
           {
             float interpolate = 1.0f / (2.0f * newDist - distances[1] - distances[0]);
-            float diffs[] = {(newDist - distances[0]), (newDist - distances[1])};
+            float diffs[] = {static_cast<float>(newDist - distances[0]), static_cast<float>(newDist - distances[1])};
             _data[candidate] = (diffs[0] * extensions[0] +
                                 diffs[1] * extensions[1]) * interpolate;
           }
