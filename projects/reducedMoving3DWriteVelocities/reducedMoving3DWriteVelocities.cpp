@@ -411,6 +411,10 @@ void runEverytime()
       // first write the error matrix dims only once
       fluid->writeSubspaceErrorMatrixDims(simulationSnapshots); 
 
+      // make the pbrt directory
+      string cmd = string("mkdir ") + reducedPath + string("pbrt");
+      system(cmd.c_str());
+
       // add the initial smoke and set its initial velocity only once
       fluid->addSmokeSphere(); 
       fluid->setInitialVelocity(box);
