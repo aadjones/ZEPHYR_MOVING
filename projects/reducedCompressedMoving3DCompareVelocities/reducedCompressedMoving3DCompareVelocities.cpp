@@ -453,8 +453,8 @@ void runEverytime()
       TIMER::printTimingsPerFrame(step);
       cout << " velocityAbs = " << VECTOR(fluid->velocityErrorAbs()) << ";" << endl;
       cout << " velocityRelative = " << VECTOR(fluid->velocityErrorRelative()) << ";" << endl;
-      //cout << " densityAbs = " << VECTOR(fluid->densityErrorAbs()) << ";" << endl;
-      //cout << " densityRelative = " << VECTOR(fluid->densityErrorRelative()) << ";" << endl;
+      cout << " densityAbs = " << VECTOR(fluid->densityErrorAbs()) << ";" << endl;
+      cout << " densityRelative = " << VECTOR(fluid->densityErrorRelative()) << ";" << endl;
     }
     
     // check if we're done
@@ -466,6 +466,10 @@ void runEverytime()
       // convert from vector<Real> to VECTOR
       VECTOR groundRelativeError(fluid->velocityErrorRelative());
       groundRelativeError.write(path);
+
+      path = compressionPath + string("compression.density.relative.L2.ground.error.vector");
+      VECTOR densityRelativeError(fluid->densityErrorRelative());
+      densityRelativeError.write(path);
 
       TIMER::printTimings();
       // if we were already capturing a movie

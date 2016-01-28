@@ -442,8 +442,8 @@ void runEverytime()
       TIMER::printTimingsPerFrame(step);
       cout << " velocityAbs = " << VECTOR(fluid->velocityErrorAbs()) << ";" << endl;
       cout << " velocityRelative = " << VECTOR(fluid->velocityErrorRelative()) << ";" << endl;
-      //cout << " densityAbs = " << VECTOR(fluid->densityErrorAbs()) << ";" << endl;
-      //cout << " densityRelative = " << VECTOR(fluid->densityErrorRelative()) << ";" << endl;
+      cout << " densityAbs = " << VECTOR(fluid->densityErrorAbs()) << ";" << endl;
+      cout << " densityRelative = " << VECTOR(fluid->densityErrorRelative()) << ";" << endl;
     // }
 
     // check if we're done
@@ -451,6 +451,10 @@ void runEverytime()
       string path = reducedPath + string("uncompressed.relative.L2.error.ground.vector");
       VECTOR relativeError(fluid->velocityErrorRelative());
       relativeError.write(path);
+
+      path = reducedPath + string("uncompressed.density.relative.L2.error.ground.vector");
+      VECTOR densityError(fluid->densityErrorRelative());
+      densityError.write(path);
       
       TIMER::printTimings();      
       // if we were already capturing a movie
